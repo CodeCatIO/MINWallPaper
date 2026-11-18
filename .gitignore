@@ -1,6 +1,8 @@
 bin/
 obj/
 data/
+publish/
+dist/
 .vs/
 *.user
 *.suo

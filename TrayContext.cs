@@ -2,6 +2,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using MINWallPaper.Music;
+using MINWallPaper.Native;
 using MINWallPaper.Storage;
 using MINWallPaper.Widgets;
 
@@ -11,10 +12,14 @@ namespace MINWallPaper;
 internal sealed class TrayContext : ApplicationContext
 {
     private readonly NotifyIcon _tray;
+    private readonly ActivationWindow _activation;
     private WebLibraryForm? _form;
 
     public TrayContext(string[] args)
     {
+        // 第二个实例通过这个消息窗口唤起面板。
+        _activation = new ActivationWindow(ShowPanel);
+
         _tray = new NotifyIcon
         {
             Icon = SystemIcons.Application,
@@ -71,8 +76,14 @@ internal sealed class TrayContext : ApplicationContext
             }
 
             _form.Show();
-            _form.WindowState = FormWindowState.Normal;
+
+            if (_form.WindowState == FormWindowState.Minimized)
+            {
+                _form.WindowState = FormWindowState.Normal;
+            }
+
             _form.Activate();
+            NativeMethods.SetForegroundWindow(_form.Handle);
         }
         catch (Exception ex)
         {
@@ -88,6 +99,7 @@ internal sealed class TrayContext : ApplicationContext
 
         _tray.Visible = false;
         _tray.Dispose();
+        _activation.Dispose();
         _form?.Dispose();
         Log.Write("==== 退出");
         ExitThread();
