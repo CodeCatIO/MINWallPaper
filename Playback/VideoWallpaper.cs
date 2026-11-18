@@ -30,14 +30,14 @@ internal sealed class VideoWallpaper : IDisposable
     /// <summary>把播放器绑定到目标窗口，必须在窗口挂到壁纸层之后调用。</summary>
     public void Attach(IntPtr hwnd)
     {
-        if (_engine != null)
-        {
-            return;
-        }
-
         _hwnd = hwnd;
+        _disposing = false;
         EnsureMediaFoundation();
-        CreateEngine();
+
+        if (_engine == null)
+        {
+            CreateEngine();
+        }
     }
 
     private void EnsureMediaFoundation()

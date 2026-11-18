@@ -471,6 +471,7 @@
     padding: 3px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+    grid-auto-rows: max-content;
     gap: 16px;
     align-content: start;
     scrollbar-width: none;
@@ -499,6 +500,374 @@
   .tool .foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); display: flex; align-items: center; }
   .tool .edit { margin-left: auto; padding: 6px 16px; border-radius: 999px; background: #3c3c44; font-size: 12.5px; }
   .tool .edit:hover { background: #47474f; }
+
+  /* ---------- 组件卡片与编辑抽屉 ---------- */
+  .tool-add { position: relative; margin-left: auto; display: flex; gap: 8px; }
+  .addbtn {
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: #2f2f36;
+    color: var(--text);
+    font-size: 12.5px;
+    box-shadow: inset 0 0 0 1px var(--line);
+    transition: background .2s, transform .24s cubic-bezier(.34, 1.56, .64, 1);
+  }
+  .addbtn:hover { background: #3a3a43; transform: translateY(-2px); }
+  .addbtn:active { transform: scale(.96); }
+  .addbtn.primary {
+    background: var(--brand);
+    color: #07130d;
+    font-weight: 600;
+    box-shadow: none;
+  }
+  .addbtn.primary:hover { filter: brightness(1.06); background: var(--brand); }
+
+  .add-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 60;
+    min-width: 196px;
+    padding: 6px;
+    border-radius: 14px;
+    background: #26272e;
+    border: 1px solid rgba(255, 255, 255, .12);
+    box-shadow: 0 18px 38px rgba(0, 0, 0, .5);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .add-menu button {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size: 13px;
+    text-align: left;
+    color: var(--text);
+  }
+  .add-menu button span { font-size: 10.5px; color: var(--faint); }
+  .add-menu button:hover { background: rgba(70, 226, 168, .12); }
+
+  .widget-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-self: start;
+    transition: transform .24s cubic-bezier(.34, 1.56, .64, 1), box-shadow .24s, border-color .24s;
+  }
+  .widget-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(255, 255, 255, .18);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, .35);
+  }
+
+  .wc-thumb {
+    position: relative;
+    flex: 0 0 148px;
+    height: 148px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background:
+      radial-gradient(120% 150% at 20% 0%, rgba(120, 130, 190, .22), transparent 60%),
+      radial-gradient(120% 160% at 90% 110%, rgba(50, 190, 150, .16), transparent 60%),
+      #15161b;
+    border-bottom: 1px solid var(--line);
+  }
+  .wc-thumb img {
+    max-width: 88%;
+    max-height: 82%;
+    display: block;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, .48));
+    transition: opacity .2s, filter .2s;
+  }
+  .widget-card.off .wc-thumb img { opacity: .22; filter: grayscale(1) blur(1px); }
+  .wc-offlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: rgba(255, 255, 255, .62);
+    background: rgba(8, 8, 10, .28);
+  }
+
+  .wc-main { padding: 13px 15px 12px; display: flex; flex-direction: column; gap: 5px; flex: 1 1 auto; }
+  .wc-title { display: flex; align-items: center; gap: 8px; }
+  .wc-title h3 { margin: 0; font-size: 15px; }
+  .wc-style {
+    font-size: 10.5px;
+    color: var(--faint);
+    border: 1px solid var(--line);
+    padding: 1px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .wc-desc { margin: 0; color: var(--muted); font-size: 11.5px; }
+  .wc-foot { margin-top: auto; padding-top: 10px; display: flex; align-items: center; gap: 6px; }
+  .wc-edit { margin-left: auto; padding: 6px 15px; border-radius: 999px; background: #3c3c44; font-size: 12px; }
+  .wc-edit:hover { background: #47474f; }
+  .wc-del {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    color: var(--faint);
+    transition: background .18s, color .18s;
+  }
+  .wc-del:hover { background: rgba(255, 90, 90, .14); color: #ff9a9a; }
+  .wc-del.armed { background: rgba(255, 90, 90, .2); color: #ff9a9a; font-size: 11px; width: auto; padding: 0 10px; border-radius: 999px; }
+
+  .ed-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(4, 4, 6, .5);
+    opacity: 0;
+    transition: opacity .24s;
+  }
+  .ed-mask.show { opacity: 1; }
+
+  .ed {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: min(392px, calc(100vw - 20px));
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    background: #212227;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 20px;
+    box-shadow: 0 26px 64px rgba(0, 0, 0, .58);
+    overflow: hidden;
+    transform: translateX(112%);
+    transition: transform .32s cubic-bezier(.22, 1, .36, 1);
+  }
+  .ed.open { transform: none; }
+
+  .ed-head { flex: 0 0 auto; display: flex; align-items: flex-start; gap: 10px; padding: 17px 18px 11px; }
+  .ed-head h2 { margin: 0; font-size: 17px; }
+  .ed-head p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+  .ed-x {
+    margin-left: auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #2f3038;
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .ed-x:hover { background: #3b3c45; color: #fff; }
+
+  .ed-preview {
+    flex: 0 0 auto;
+    margin: 0 18px;
+    height: 148px;
+    border-radius: 14px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background-color: #131418;
+    background-image:
+      linear-gradient(45deg, #191a1f 25%, transparent 25%),
+      linear-gradient(-45deg, #191a1f 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #191a1f 75%),
+      linear-gradient(-45deg, transparent 75%, #191a1f 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .ed-preview img { max-width: 90%; max-height: 84%; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .5)); }
+
+  .ed-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 13px 18px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: #3a3b44 transparent;
+  }
+  .ed-body::-webkit-scrollbar { width: 6px; }
+  .ed-body::-webkit-scrollbar-thumb { background: #3a3b44; border-radius: 3px; }
+
+  .ed-sec {
+    background: #1b1c21;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ed-sec h4 {
+    margin: 0 0 1px;
+    font-size: 10.5px;
+    letter-spacing: 2px;
+    color: var(--faint);
+    font-weight: 600;
+  }
+
+  .ed-field { display: flex; align-items: center; gap: 10px; }
+  .ed-field.col { flex-direction: column; align-items: stretch; gap: 8px; }
+  .ed-field > label { flex: 0 0 64px; font-size: 12px; color: var(--muted); }
+  .ed-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 8px;
+    background: #26272e;
+    border: 1px solid transparent;
+    color: var(--text);
+    font-size: 12.5px;
+    outline: none;
+    user-select: text;
+  }
+  .ed-input:focus { border-color: rgba(70, 226, 168, .45); }
+  select.ed-input { padding-right: 4px; }
+
+  .ed-range { display: flex; align-items: center; gap: 10px; }
+  .ed-range label { flex: 0 0 64px; font-size: 12px; color: var(--muted); }
+  .ed-range input[type=range] {
+    flex: 1 1 auto;
+    min-width: 0;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: #3a3b44;
+    outline: none;
+  }
+  .ed-range input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #f2f3f5;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+    cursor: pointer;
+  }
+  .ed-range b { flex: 0 0 42px; text-align: right; font-size: 11.5px; color: var(--muted); font-weight: 500; }
+
+  .ed-styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .ed-styles button {
+    padding: 7px 3px;
+    border-radius: 8px;
+    background: #26272e;
+    color: var(--muted);
+    font-size: 11.5px;
+    border: 1px solid transparent;
+    transition: background .18s, color .18s, border-color .18s;
+  }
+  .ed-styles button:hover { background: #2f3037; color: var(--text); }
+  .ed-styles button.on {
+    background: rgba(70, 226, 168, .13);
+    color: #8cf0c8;
+    border-color: rgba(70, 226, 168, .42);
+  }
+
+  .ed-colors { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .ed-color {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 4px;
+    border-radius: 8px;
+    background: #26272e;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .ed-color input { width: 100%; height: 20px; border: 0; padding: 0; background: none; cursor: pointer; }
+  .ed-color input::-webkit-color-swatch-wrapper { padding: 0; }
+  .ed-color input::-webkit-color-swatch { border: 0; border-radius: 5px; }
+
+  .ed-switch { position: relative; width: 40px; height: 22px; flex: 0 0 auto; }
+  .ed-switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .ed-switch span {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: #3f404a;
+    transition: background .2s;
+    pointer-events: none;
+  }
+  .ed-switch span::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform .22s cubic-bezier(.34, 1.56, .64, 1);
+  }
+  .ed-switch input:checked + span { background: var(--brand); }
+  .ed-switch input:checked + span::after { transform: translateX(18px); }
+
+  .ed-tip { margin: 0; font-size: 11.5px; color: var(--faint); line-height: 1.5; }
+
+  .ed-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: rgba(70, 226, 168, .14);
+    color: #8cf0c8;
+    font-size: 12px;
+    border: 1px solid rgba(70, 226, 168, .32);
+    transition: background .18s;
+  }
+  .ed-btn:hover { background: rgba(70, 226, 168, .22); }
+  .ed-btn.ghost {
+    background: #26272e;
+    color: var(--muted);
+    border-color: transparent;
+  }
+  .ed-btn.ghost:hover { background: #303138; color: var(--text); }
+
+  .ed-applist { display: flex; flex-direction: column; gap: 4px; max-height: 168px; overflow-y: auto; }
+  .ed-app-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 7px;
+    background: #26272e;
+    font-size: 12px;
+  }
+  .ed-app-row span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ed-app-row small { color: var(--faint); font-size: 10px; }
+  .ed-app-row button { color: var(--faint); font-size: 14px; width: 20px; height: 20px; border-radius: 50%; }
+  .ed-app-row button:hover { background: rgba(255, 90, 90, .16); color: #ff9a9a; }
+
+  .ed-foot { flex: 0 0 auto; display: flex; gap: 10px; padding: 12px 18px 16px; }
+  .ed-danger { padding: 10px 18px; border-radius: 12px; background: rgba(255, 90, 90, .12); color: #ff9a9a; font-size: 12.5px; }
+  .ed-danger:hover { background: rgba(255, 90, 90, .2); }
+  .ed-primary {
+    margin-left: auto;
+    padding: 10px 28px;
+    border-radius: 12px;
+    background: var(--brand);
+    color: #07130d;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .ed-primary:hover { filter: brightness(1.06); }
 
   .switch { position: relative; width: 46px; height: 26px; flex: 0 0 auto; }
   .switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
@@ -1409,7 +1778,20 @@
       <div class="page-head">
         <div class="titles">
           <h1>工具库</h1>
-          <p>开关控制桌面组件显示，编辑功能稍后开放</p>
+          <p>每个组件都能单独调样式、颜色、字体和位置，可以同时放多个</p>
+        </div>
+        <div class="tool-add">
+          <button class="addbtn primary" id="addWidget">＋ 增加</button>
+          <div class="add-menu" id="addMenu" hidden>
+            <button data-kind="clock">时钟<span>时间 · 日期</span></button>
+            <button data-kind="wave">音浪<span>系统声音频谱</span></button>
+            <button data-kind="text">文本<span>自定义文字</span></button>
+            <button data-kind="cpu">CPU<span>占用 · 核心</span></button>
+            <button data-kind="memory">内存<span>占用 · 分类</span></button>
+            <button data-kind="gpu">GPU<span>占用 · 显存</span></button>
+            <button data-kind="disk">磁盘<span>分区占用</span></button>
+            <button data-kind="image">图片<span>相框 · 轮播</span></button>
+          </div>
         </div>
       </div>
       <div class="tool-grid" id="toolGrid"></div>
@@ -1617,6 +1999,153 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- 组件编辑抽屉 -->
+<div class="ed-mask" id="edMask" hidden></div>
+<aside class="ed" id="edPanel" hidden>
+  <header class="ed-head">
+    <div>
+      <h2 id="edTitle">编辑组件</h2>
+      <p id="edSub">时钟 · 玻璃水滴</p>
+    </div>
+    <button class="ed-x" id="edClose" title="关闭">×</button>
+  </header>
+
+  <div class="ed-preview"><img id="edImg" alt="组件预览"></div>
+
+  <div class="ed-body">
+    <section class="ed-sec">
+      <div class="ed-field">
+        <label>名称</label>
+        <input class="ed-input" id="edName" maxlength="20">
+      </div>
+      <div class="ed-field col">
+        <label>样式</label>
+        <div class="ed-styles" id="edStyles"></div>
+      </div>
+    </section>
+
+    <section class="ed-sec" id="edTextSec">
+      <h4>文本</h4>
+      <div class="ed-field col">
+        <label>内容</label>
+        <input class="ed-input" id="edContent" maxlength="40" placeholder="输入要显示的文字">
+      </div>
+    </section>
+
+    <section class="ed-sec" id="edImageSec">
+      <h4>图片</h4>
+      <div class="ed-field">
+        <label>图片</label>
+        <button class="ed-btn" id="edPickImages">选择图片</button>
+        <button class="ed-btn ghost" id="edClearImages">清空</button>
+      </div>
+      <p class="ed-tip" id="edImageHint">未选择图片</p>
+      <div class="ed-range" id="edCarouselRow">
+        <label>轮播间隔</label>
+        <input type="range" id="edCarouselSeconds" min="2" max="15" step="1">
+        <b id="edCarouselVal">4s</b>
+      </div>
+    </section>
+
+    <section class="ed-sec" id="edWaveSec">
+      <h4>音浪</h4>
+      <div class="ed-range">
+        <label>柱数</label>
+        <input type="range" id="edBarCount" min="12" max="64" step="4">
+        <b id="edBarCountVal">48</b>
+      </div>
+      <div class="ed-range">
+        <label>灵敏度</label>
+        <input type="range" id="edSensitivity" min="30" max="300" step="5">
+        <b id="edSensitivityVal">120%</b>
+      </div>
+      <p class="ed-tip">频谱来自系统声音回环；灵敏度越高，小声也更容易顶满。</p>
+    </section>
+
+    <section class="ed-sec">
+      <h4>位置与尺寸</h4>
+      <p class="ed-tip">在桌面上直接拖动组件移动；拖边框或圆点缩放。横向变宽会让数字、柱子的间距变大，纵向变高会让音浪柱子更长、时钟的行距更大。</p>
+    </section>
+
+    <section class="ed-sec">
+      <h4>颜色</h4>
+      <div class="ed-colors">
+        <label class="ed-color"><span>文字</span><input type="color" id="edTextColor"></label>
+        <label class="ed-color"><span>主色</span><input type="color" id="edAccentColor"></label>
+        <label class="ed-color"><span>辅色</span><input type="color" id="edAccent2Color"></label>
+        <label class="ed-color"><span>背景</span><input type="color" id="edBgColor"></label>
+      </div>
+      <div class="ed-range">
+        <label>背景浓度</label>
+        <input type="range" id="edBgAlpha" min="0" max="100" step="1">
+        <b id="edBgAlphaVal">46%</b>
+      </div>
+      <div class="ed-range">
+        <label>圆角</label>
+        <input type="range" id="edRadius" min="0" max="60" step="1">
+        <b id="edRadiusVal">24</b>
+      </div>
+    </section>
+
+    <section class="ed-sec">
+      <h4>字体</h4>
+      <div class="ed-field">
+        <label>字体</label>
+        <select class="ed-input" id="edFont">
+          <option value="Microsoft YaHei UI">微软雅黑 UI</option>
+          <option value="Microsoft YaHei">微软雅黑</option>
+          <option value="DengXian">等线</option>
+          <option value="SimHei">黑体</option>
+          <option value="SimSun">宋体</option>
+          <option value="KaiTi">楷体</option>
+          <option value="Segoe UI">Segoe UI</option>
+          <option value="Consolas">Consolas</option>
+        </select>
+      </div>
+      <div class="ed-range">
+        <label>字号</label>
+        <input type="range" id="edFontSize" min="10" max="120" step="1">
+        <b id="edFontSizeVal">34</b>
+      </div>
+    </section>
+
+    <section class="ed-sec" id="edClockSec">
+      <h4>时钟</h4>
+      <div class="ed-field">
+        <label>时间格式</label>
+        <select class="ed-input" id="edClockFormat">
+          <option value="HH:mm">24 小时 · 14:05</option>
+          <option value="HH:mm:ss">24 小时带秒 · 14:05:09</option>
+          <option value="hh:mm A">12 小时 · 02:05 PM</option>
+          <option value="h:mm A">12 小时 · 2:05 PM</option>
+        </select>
+      </div>
+      <div class="ed-field">
+        <label>日期格式</label>
+        <select class="ed-input" id="edDateFormat">
+          <option value="M月d日">11月17日</option>
+          <option value="yyyy年M月d日">2026年11月17日</option>
+          <option value="yyyy.MM.dd">2026.11.17</option>
+          <option value="yyyy-MM-dd">2026-11-17</option>
+          <option value="MM/dd">11/17</option>
+          <option value="ddd">周二</option>
+          <option value="dddd">星期二</option>
+          <option value="none">不显示日期</option>
+        </select>
+      </div>
+      <div class="ed-field">
+        <label>星期</label>
+        <label class="ed-switch"><input type="checkbox" id="edWeek"><span></span></label>
+      </div>
+    </section>
+  </div>
+
+  <footer class="ed-foot">
+    <button class="ed-danger" id="edDelete">删除组件</button>
+    <button class="ed-primary" id="edDone">完成</button>
+  </footer>
+</aside>
+
 <div class="rz t" data-edge="top"></div>
 <div class="rz b" data-edge="bottom"></div>
 <div class="rz l" data-edge="left"></div>
@@ -1634,7 +2163,8 @@
 
   const state = {
     wallpapers: [],
-    tools: [],
+    widgets: [],
+    rain: false,
     music: { files: [], playlists: [], scanning: false },
     current: { path: null, kind: null },
     player: { playing: false, mode: 'list', volume: 0.5, muted: false, title: '', position: 0, duration: 0, queueName: '', art: '', lyrics: '' },
@@ -2061,33 +2591,416 @@
   }
 
   /* ---------------- 工具库 ---------------- */
+  const CLOCK_STYLES = [
+    ['glass', '玻璃水滴'], ['flip', '翻页数字'], ['analog', '圆环指针'], ['neon', '霓虹辉光'], ['minimal', '极简细体'],
+    ['arc', '弧形进度'], ['capsule', '渐变胶囊'], ['led', '点阵 LED'], ['poster', '海报'], ['outline', '描边']
+  ];
+  const WAVE_STYLES = [
+    ['bars', '渐变柱形'], ['line', '霓虹线波'], ['glass', '液态玻璃'], ['radial', '环形辐射'], ['dots', '点阵粒子'],
+    ['aurora', '极光流动'], ['scan', '赛博扫描'], ['ink', '水墨涟漪'], ['segments', 'LED 分段'], ['mirror', '双面镜像']
+  ];
+  const TEXT_STYLES = [
+    ['plain', '极简'], ['spaced', '字距'], ['glow', '辉光'], ['outline', '描边']
+  ];
+  const CPU_STYLES = [
+    ['line', '数字折线'], ['ring', '环形仪表'], ['cores', '核心方块']
+  ];
+  const MEMORY_STYLES = [
+    ['ring', '圆环进度'], ['stack', '分类堆叠']
+  ];
+  const GPU_STYLES = [
+    ['bar', '温度占用'], ['ring', '半圆仪表'], ['info', '信息卡']
+  ];
+  const DISK_STYLES = [
+    ['bars', '分区条'], ['donut', '甜甜圈']
+  ];
+  const IMAGE_STYLES = [
+    ['single', '单图相框'], ['grid', '三图拼贴'], ['carousel', '轮播']
+  ];
+
+  function styleList(type) {
+    switch (type) {
+      case 'wave': return WAVE_STYLES;
+      case 'text': return TEXT_STYLES;
+      case 'cpu': return CPU_STYLES;
+      case 'memory': return MEMORY_STYLES;
+      case 'gpu': return GPU_STYLES;
+      case 'disk': return DISK_STYLES;
+      case 'image': return IMAGE_STYLES;
+      default: return CLOCK_STYLES;
+    }
+  }
+
+  function styleName(type, style) {
+    const hit = styleList(type).find(s => s[0] === style);
+    return hit ? hit[1] : style;
+  }
+
+  function typeName(type) {
+    const names = {
+      clock: '时钟', wave: '音浪', text: '文本',
+      cpu: 'CPU', memory: '内存', gpu: 'GPU', disk: '磁盘',
+      image: '图片'
+    };
+    return names[type] || '组件';
+  }
+
+  function anchorName(anchor) {
+    if (anchor === 'free') return '自由位置';
+
+    const names = {
+      'top-left': '左上', top: '顶部', 'top-right': '右上',
+      left: '左侧', center: '居中', right: '右侧',
+      'bottom-left': '左下', bottom: '底部', 'bottom-right': '右下'
+    };
+    return '屏幕' + (names[anchor] || '右上');
+  }
+
+  function widgetCard(w) {
+    const card = el('div', 'widget-card' + (w.enabled ? '' : ' off'));
+
+    const thumb = el('div', 'wc-thumb');
+    if (w.preview) {
+      const img = document.createElement('img');
+      img.src = w.preview;
+      img.alt = w.name;
+      thumb.appendChild(img);
+    }
+    if (!w.enabled) thumb.appendChild(el('span', 'wc-offlay', '已关闭'));
+    card.appendChild(thumb);
+
+    const main = el('div', 'wc-main');
+    const title = el('div', 'wc-title');
+    title.appendChild(el('h3', null, w.name));
+    title.appendChild(el('span', 'wc-style', styleName(w.type, w.style)));
+    main.appendChild(title);
+    main.appendChild(el('p', 'wc-desc',
+      typeName(w.type) + ' · ' + w.width + '×' + w.height + ' · ' + anchorName(w.anchor)));
+
+    const foot = el('div', 'wc-foot');
+    const sw = el('label', 'switch');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!w.enabled;
+    cb.addEventListener('change', () => send({ cmd: 'setWidgetEnabled', id: w.id, enabled: cb.checked }));
+    sw.appendChild(cb);
+    sw.appendChild(el('span'));
+    foot.appendChild(sw);
+
+    const edit = el('button', 'wc-edit', '编辑');
+    edit.addEventListener('click', () => openEditor(w.id));
+    foot.appendChild(edit);
+
+    const del = el('button', 'wc-del', '×');
+    del.title = '删除组件';
+    let armed = 0;
+    del.addEventListener('click', () => {
+      if (del.classList.contains('armed')) {
+        clearTimeout(armed);
+        send({ cmd: 'deleteWidget', id: w.id });
+        if (editing && editing.id === w.id) closeEditor();
+        return;
+      }
+
+      del.classList.add('armed');
+      del.textContent = '确认';
+      armed = setTimeout(() => {
+        del.classList.remove('armed');
+        del.textContent = '×';
+      }, 2400);
+    });
+    foot.appendChild(del);
+
+    main.appendChild(foot);
+    card.appendChild(main);
+    return card;
+  }
+
+  function rainCard() {
+    const card = el('div', 'widget-card' + (state.rain ? '' : ' off'));
+    const thumb = el('div', 'wc-thumb');
+    thumb.innerHTML = '<svg viewBox="0 0 130 84" width="160" height="104" fill="none" ' +
+      'stroke="rgba(190,220,245,.72)" stroke-width="1.4" stroke-linecap="round">' +
+      '<path d="M22 16l-6 18M44 10l-7 22M68 18l-6 18M94 12l-7 22M32 44l-6 18M58 40l-6 18M84 46l-6 18M108 42l-6 18"/>' +
+      '</svg>';
+    if (!state.rain) thumb.appendChild(el('span', 'wc-offlay', '已关闭'));
+    card.appendChild(thumb);
+
+    const main = el('div', 'wc-main');
+    const title = el('div', 'wc-title');
+    title.appendChild(el('h3', null, '落雨'));
+    title.appendChild(el('span', 'wc-style', '全屏雨丝'));
+    main.appendChild(title);
+    main.appendChild(el('p', 'wc-desc', '透明雨丝铺满屏幕，鼠标可以穿透，不挡桌面图标'));
+
+    const foot = el('div', 'wc-foot');
+    const sw = el('label', 'switch');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!state.rain;
+    cb.addEventListener('change', () => send({ cmd: 'setRain', enabled: cb.checked }));
+    sw.appendChild(cb);
+    sw.appendChild(el('span'));
+    foot.appendChild(sw);
+    main.appendChild(foot);
+
+    card.appendChild(main);
+    return card;
+  }
+
   function renderTools() {
     const host = $('#toolGrid');
     host.innerHTML = '';
 
-    state.tools.forEach(tool => {
-      const card = el('div', 'tool');
-      card.appendChild(el('h3', null, tool.name));
-      card.appendChild(el('p', null, tool.description));
+    (state.widgets || []).forEach(w => host.appendChild(widgetCard(w)));
+    host.appendChild(rainCard());
+  }
 
-      const foot = el('div', 'foot');
-      const sw = el('label', 'switch');
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = !!tool.enabled;
-      cb.addEventListener('change', () => {
-        send({ cmd: 'setTool', id: tool.id, enabled: cb.checked });
+  /* ---------------- 组件编辑抽屉 ---------------- */
+  let editing = null;
+  let editTimer = 0;
+
+  function currentLive() {
+    return editing ? (state.widgets || []).find(w => w.id === editing.id) : null;
+  }
+
+  function queueUpdate() {
+    clearTimeout(editTimer);
+    editTimer = setTimeout(() => {
+      if (!editing) return;
+
+      const payload = {};
+      Object.keys(editing).forEach(key => {
+        if (key !== 'preview' && key !== 'styleName') payload[key] = editing[key];
       });
-      sw.appendChild(cb);
-      sw.appendChild(el('span'));
-      foot.appendChild(sw);
+      send({ cmd: 'updateWidget', widget: payload });
+    }, 140);
+  }
 
-      const edit = el('button', 'edit', '编辑');
-      edit.addEventListener('click', () => toast('组件编辑功能开发中，敬请期待'));
-      foot.appendChild(edit);
+  function openEditor(id) {
+    const data = (state.widgets || []).find(w => w.id === id);
+    if (!data) return;
 
-      card.appendChild(foot);
-      host.appendChild(card);
+    editing = JSON.parse(JSON.stringify(data));
+    clearTimeout(editTimer);
+    syncEditor();
+
+    $('#edMask').hidden = false;
+    $('#edPanel').hidden = false;
+    requestAnimationFrame(() => {
+      $('#edMask').classList.add('show');
+      $('#edPanel').classList.add('open');
+    });
+
+    // 让这个组件暂时可以接收鼠标，直接在桌面上拖动定位。
+    send({ cmd: 'beginWidgetDrag', id: editing.id });
+  }
+
+  function closeEditor() {
+    editing = null;
+    clearTimeout(editTimer);
+    send({ cmd: 'endWidgetDrag' });
+    $('#edMask').classList.remove('show');
+    $('#edPanel').classList.remove('open');
+
+    setTimeout(() => {
+      if (editing) return;
+      $('#edMask').hidden = true;
+      $('#edPanel').hidden = true;
+    }, 300);
+  }
+
+  function buildStyleChips() {
+    const host = $('#edStyles');
+    host.innerHTML = '';
+    const list = styleList(editing.type);
+
+    list.forEach(([id, name]) => {
+      const btn = el('button', editing.style === id ? 'on' : '', name);
+      btn.addEventListener('click', () => {
+        editing.style = id;
+        buildStyleChips();
+        $('#edSub').textContent = typeName(editing.type) + ' · ' + name;
+        renderImageInfo();
+        queueUpdate();
+      });
+      host.appendChild(btn);
+    });
+  }
+
+  function safeColor(value, fallback) {
+    return /^#[0-9a-f]{6}$/i.test(value || '') ? value : fallback;
+  }
+
+  function updateEditorLabels() {
+    $('#edBgAlphaVal').textContent = Math.round((editing.bgAlpha || 0) * 100) + '%';
+    $('#edRadiusVal').textContent = editing.radius;
+    $('#edFontSizeVal').textContent = editing.fontSize;
+    $('#edBarCountVal').textContent = editing.barCount;
+    $('#edSensitivityVal').textContent = Math.round((editing.sensitivity || 1.2) * 100) + '%';
+    $('#edCarouselVal').textContent = (editing.carouselSeconds || 4) + 's';
+  }
+
+  function renderImageInfo() {
+    const images = editing.images || [];
+    $('#edImageHint').textContent = images.length
+      ? '已选择 ' + images.length + ' 张图片'
+      : '未选择图片';
+    $('#edCarouselSeconds').value = editing.carouselSeconds || 4;
+    $('#edCarouselRow').hidden = editing.style !== 'carousel';
+  }
+
+  function syncEditor() {
+    const type = editing.type;
+
+    $('#edTitle').textContent = '编辑' + typeName(type);
+    $('#edSub').textContent = typeName(type) + ' · ' + styleName(type, editing.style);
+    $('#edClockSec').hidden = type !== 'clock';
+    $('#edWaveSec').hidden = type !== 'wave';
+    $('#edTextSec').hidden = type !== 'text';
+    $('#edImageSec').hidden = type !== 'image';
+    $('#edImg').src = editing.preview || '';
+
+    $('#edName').value = editing.name || '';
+    $('#edBgAlpha').value = Math.round((editing.bgAlpha || 0) * 100);
+    $('#edRadius').value = editing.radius;
+    $('#edFontSize').value = editing.fontSize;
+    $('#edBarCount').value = editing.barCount;
+    $('#edSensitivity').value = Math.round((editing.sensitivity || 1.2) * 100);
+
+    $('#edTextColor').value = safeColor(editing.textColor, '#f5f6fa');
+    $('#edAccentColor').value = safeColor(editing.accentColor, '#8b7bff');
+    $('#edAccent2Color').value = safeColor(editing.accentColor2, '#46e2a8');
+    $('#edBgColor').value = safeColor(editing.bgColor, '#12141a');
+
+    $('#edFont').value = editing.fontFamily;
+    $('#edClockFormat').value = editing.clockFormat;
+    $('#edDateFormat').value = editing.dateFormat;
+    $('#edWeek').checked = !!editing.showWeek;
+    $('#edContent').value = editing.content || '';
+
+    renderImageInfo();
+    updateEditorLabels();
+    buildStyleChips();
+  }
+
+  function refreshEditorMeta() {
+    if (!editing) return;
+    const live = currentLive();
+
+    if (!live) {
+      closeEditor();
+      return;
+    }
+
+    // 拖拽 / 缩放是后端直接改的，编辑副本必须跟上，否则下次改颜色会把尺寸写回去。
+    editing.width = live.width;
+    editing.height = live.height;
+    editing.anchor = live.anchor;
+    editing.posX = live.posX;
+    editing.posY = live.posY;
+    editing.images = live.images || [];
+    editing.carouselSeconds = live.carouselSeconds || 4;
+
+    if (live.preview) $('#edImg').src = live.preview;
+    renderImageInfo();
+  }
+
+  function bindEditor() {
+    const bindText = (id, field) => {
+      $('#' + id).addEventListener('input', e => {
+        if (!editing) return;
+        editing[field] = e.target.value;
+        queueUpdate();
+      });
+    };
+
+    const bindNumber = (id, field, transform) => {
+      $('#' + id).addEventListener('input', e => {
+        if (!editing) return;
+        editing[field] = transform(e.target.value);
+        updateEditorLabels();
+        queueUpdate();
+      });
+    };
+
+    bindText('edName', 'name');
+    bindText('edContent', 'content');
+    bindText('edTextColor', 'textColor');
+    bindText('edAccentColor', 'accentColor');
+    bindText('edAccent2Color', 'accentColor2');
+    bindText('edBgColor', 'bgColor');
+
+    bindNumber('edBgAlpha', 'bgAlpha', v => (+v) / 100);
+    bindNumber('edRadius', 'radius', v => Math.round(+v));
+    bindNumber('edFontSize', 'fontSize', v => Math.round(+v));
+    bindNumber('edBarCount', 'barCount', v => Math.round(+v));
+    bindNumber('edSensitivity', 'sensitivity', v => Math.max(0.3, Math.min(3, (+v) / 100)));
+    bindNumber('edCarouselSeconds', 'carouselSeconds', v => Math.round(+v));
+
+    $('#edFont').addEventListener('change', e => {
+      if (!editing) return;
+      editing.fontFamily = e.target.value;
+      queueUpdate();
+    });
+
+    $('#edClockFormat').addEventListener('change', e => {
+      if (!editing) return;
+      editing.clockFormat = e.target.value;
+      queueUpdate();
+    });
+
+    $('#edDateFormat').addEventListener('change', e => {
+      if (!editing) return;
+      editing.dateFormat = e.target.value;
+      queueUpdate();
+    });
+
+    $('#edWeek').addEventListener('change', e => {
+      if (!editing) return;
+      editing.showWeek = e.target.checked;
+      queueUpdate();
+    });
+
+    $('#edClose').addEventListener('click', () => closeEditor());
+    $('#edDone').addEventListener('click', () => closeEditor());
+    $('#edMask').addEventListener('click', () => closeEditor());
+
+    $('#edDelete').addEventListener('click', () => {
+      if (!editing) return;
+      send({ cmd: 'deleteWidget', id: editing.id });
+      closeEditor();
+    });
+
+    $('#edPickImages').addEventListener('click', () => {
+      if (!editing) return;
+      send({ cmd: 'pickWidgetImages', id: editing.id });
+    });
+
+    $('#edClearImages').addEventListener('click', () => {
+      if (!editing) return;
+      send({ cmd: 'clearWidgetImages', id: editing.id });
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && editing) closeEditor();
+    });
+
+    $('#addWidget').addEventListener('click', e => {
+      e.stopPropagation();
+      $('#addMenu').hidden = !$('#addMenu').hidden;
+    });
+
+    $('#addMenu').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-kind]');
+      if (!btn) return;
+
+      send({ cmd: 'addWidget', kind: btn.dataset.kind });
+      $('#addMenu').hidden = true;
+    });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.tool-add')) $('#addMenu').hidden = true;
     });
   }
 
@@ -2754,7 +3667,8 @@
       JSON.stringify((data.wallpapers || []).map(w => w.path)) !== JSON.stringify(state.wallpapers.map(w => w.path));
 
     state.wallpapers = data.wallpapers || [];
-    state.tools = data.tools || [];
+    state.widgets = data.widgets || state.widgets;
+    state.rain = !!data.rain;
     state.music = data.music || state.music;
     state.player = data.player || state.player;
     state.assignment = data.assignment || null;
@@ -2782,6 +3696,11 @@
 
     if (data.type === 'state') {
       applyState(data);
+    } else if (data.type === 'widgets') {
+      state.widgets = data.widgets || [];
+      state.rain = !!data.rain;
+      renderTools();
+      refreshEditorMeta();
     } else if (data.type === 'preview') {
       const frames = data.frames || [];
       previewFrames.set(data.path, frames);
@@ -2804,6 +3723,7 @@
     }
   });
 
+  bindEditor();
   send({ cmd: 'init' });
 </script>
 </body>

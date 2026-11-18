@@ -26,6 +26,7 @@ internal sealed class TrayContext : ApplicationContext
         var menu = new ContextMenuStrip();
         menu.Items.Add("打开壁纸库", null, (_, _) => ShowPanel());
         menu.Items.Add("停止壁纸", null, (_, _) => WallpaperHost.Instance.Stop());
+        menu.Items.Add("重新加载壁纸", null, (_, _) => WallpaperHost.Instance.Reload());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("退出", null, (_, _) => ExitApp());
         _tray.ContextMenuStrip = menu;
@@ -38,9 +39,8 @@ internal sealed class TrayContext : ApplicationContext
         MusicLibrary.Instance.Load();
         MusicAssignments.Load();
 
-        // 桌面组件默认开启时钟和音浪。
-        WidgetService.Instance.SetEnabled("clock", true);
-        WidgetService.Instance.SetEnabled("audiowave", true);
+        // 桌面组件按上次保存的配置恢复；第一次运行默认给一个时钟和一个音浪。
+        WidgetService.Instance.Load();
 
         // 带视频参数时静默启动，适合开机自启。
         if (args.Length > 0 && File.Exists(args[0]))

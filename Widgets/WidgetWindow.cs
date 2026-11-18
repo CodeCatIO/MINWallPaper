@@ -73,6 +73,12 @@ internal abstract class WidgetWindow : Form
         _timer.Start();
     }
 
+    /// <summary>运行中切换刷新频率，音浪 30fps、时钟 2fps。</summary>
+    protected void SetInterval(int intervalMs)
+    {
+        _timer.Interval = Math.Max(16, intervalMs);
+    }
+
     [DllImport("user32.dll")]
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
         int x, int y, int cx, int cy, uint flags);

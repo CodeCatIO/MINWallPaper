@@ -35,9 +35,106 @@ internal sealed class WallpaperHost
         _renderer.PlaybackError += message => PlaybackError?.Invoke(message);
 
         // 视频壁纸偶尔会因为显卡/解码器被别的程序抢占而停住，定时检查播放进度并自动重启。
+        // 同时检查桌面宿主窗口是否被 Explorer 重建，必要时重新挂载视频层。
         _healthTimer = new System.Windows.Forms.Timer { Interval = 5000 };
-        _healthTimer.Tick += (_, _) => CheckVideoHealth();
+        _healthTimer.Tick += (_, _) =>
+        {
+            EnsureVideoWallpaperCleared();
+            CheckLayerHealth();
+            CheckVideoHealth();
+        };
         _healthTimer.Start();
+    }
+
+    /// <summary>播放视频时静态壁纸必须保持为空，否则会重新盖住视频层。</summary>
+    private void EnsureVideoWallpaperCleared()
+    {
+        if (CurrentKind == WallpaperKind.Video && SystemWallpaper.IsDesktopWallpaperSet())
+        {
+            SystemWallpaper.ClearForVideo();
+            Log.Write("检测到系统壁纸重新出现，再次清除");
+        }
+    }
+
+    /// <summary>排查桌面层是否还挂在当前 WorkerW 上。</summary>
+    private void CheckLayerHealth()
+    {
+        if (_recovering || CurrentKind != WallpaperKind.Video || _hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+
+        IntPtr host = DesktopHost.FindHost();
+
+        if (host == IntPtr.Zero)
+        {
+            return;
+        }
+
+        bool handleOk = NativeMethods.IsWindow(_hwnd);
+        IntPtr parent = handleOk ? NativeMethods.GetParent(_hwnd) : IntPtr.Zero;
+        bool visible = handleOk && NativeMethods.IsWindowVisible(_hwnd);
+
+        if (handleOk && parent == host && visible)
+        {
+            return;
+        }
+
+        Log.Write($"壁纸层异常（handle={handleOk} parent=0x{parent:X} host=0x{host:X} visible={visible}），重新挂载");
+        RecoverLayer();
+    }
+
+    /// <summary>宿主被重建或窗口丢失时，把视频层重新挂回桌面并重启渲染。</summary>
+    private void RecoverLayer()
+    {
+        if (_recovering || CurrentPath == null || CurrentKind != WallpaperKind.Video)
+        {
+            return;
+        }
+
+        _recovering = true;
+        string path = CurrentPath;
+
+        try
+        {
+            // 不论旧句柄是否还有效，都整体重建窗口和渲染引擎：
+            // 宿主切换后 EVR 的输出表面已经不可靠，复用句柄容易一直报错。
+            _renderer.Dispose();
+            CloseLayer();
+            EnsureLayer();
+            ApplyVideoPoster(path);
+            _renderer.Attach(_hwnd);
+            _renderer.SetMuted(true);
+            _renderer.Play(path);
+            _lastPosition = -1;
+            Log.Write("视频壁纸层已恢复");
+        }
+        catch (Exception ex)
+        {
+            Log.Write("恢复视频壁纸失败: " + ex.Message);
+        }
+        finally
+        {
+            _recovering = false;
+        }
+    }
+
+    /// <summary>手动重新加载当前壁纸，托盘菜单用。</summary>
+    public void Reload()
+    {
+        if (CurrentPath == null)
+        {
+            return;
+        }
+
+        if (CurrentKind == WallpaperKind.Video)
+        {
+            RecoverLayer();
+        }
+        else
+        {
+            Play(CurrentPath);
+        }
     }
 
     private void CheckVideoHealth()
@@ -137,8 +234,15 @@ internal sealed class WallpaperHost
 
     public void Stop()
     {
+        bool wasVideo = CurrentKind == WallpaperKind.Video;
+
         _renderer.Dispose();
         CloseLayer();
+
+        if (wasVideo)
+        {
+            SystemWallpaper.RestoreAfterVideo();
+        }
 
         IsPlaying = false;
         CurrentPath = null;
@@ -186,6 +290,10 @@ internal sealed class WallpaperHost
         // 复用旧窗口连续换源会让 MediaEngine 偶发 Error，表现为桌面停在静态首帧。
         _renderer.Dispose();
         CloseLayer();
+
+        // 静态壁纸会盖在视频层上面，播放视频前必须把系统壁纸清掉。
+        SystemWallpaper.ClearForVideo();
+
         EnsureLayer();
         ApplyVideoPoster(path);
         _renderer.Attach(_hwnd);
@@ -240,6 +348,18 @@ internal sealed class WallpaperHost
         IntPtr host = DesktopHost.Attach(hwnd);
         Log.Write($"壁纸窗口 0x{hwnd:X} 已挂到宿主 0x{host:X}");
 
+        PrepareLayerWindow(hwnd);
+
+        _window = window;
+        _hwnd = hwnd;
+    }
+
+    /// <summary>把窗口改成桌面子窗口并铺满屏幕。</summary>
+    private static void PrepareLayerWindow(IntPtr hwnd)
+    {
+        int cx = NativeMethods.GetSystemMetrics(NativeMethods.SM_CXSCREEN);
+        int cy = NativeMethods.GetSystemMetrics(NativeMethods.SM_CYSCREEN);
+
         int style = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_STYLE);
         style = (style | NativeMethods.WS_CHILD | NativeMethods.WS_VISIBLE) & ~NativeMethods.WS_POPUP;
         NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_STYLE, style);
@@ -251,9 +371,6 @@ internal sealed class WallpaperHost
         NativeMethods.SetWindowPos(hwnd, IntPtr.Zero, 0, 0, cx, cy,
             NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE | NativeMethods.SWP_FRAMECHANGED);
         NativeMethods.ShowWindow(hwnd, NativeMethods.SW_SHOW);
-
-        _window = window;
-        _hwnd = hwnd;
     }
 
     /// <summary>

@@ -10,6 +10,7 @@ using MINWallPaper.Music;
 using MINWallPaper.Native;
 using MINWallPaper.Playback;
 using MINWallPaper.Storage;
+using MINWallPaper.Widgets;
 
 namespace MINWallPaper;
 
@@ -59,6 +60,7 @@ internal sealed class WebLibraryForm : Form
         PreviewFrames.Ready += OnPreviewReady;
         MusicPlayer.Instance.StateChanged += OnPlayerChanged;
         MusicArtwork.Ready += OnPlayerChanged;
+        WidgetService.Instance.Changed += OnWidgetsChanged;
 
         _playerTimer = new System.Windows.Forms.Timer { Interval = 1000 };
         _playerTimer.Tick += (_, _) =>
@@ -272,14 +274,8 @@ internal sealed class WebLibraryForm : Form
                 thumb = item.ThumbnailPath == null ? null : ToUrl(item.ThumbnailPath),
                 media = ToUrl(item.Path)
             }).ToList(),
-            tools = WidgetService.Instance.All.Select(tool => new
-            {
-                id = tool.Id,
-                name = tool.Name,
-                description = tool.Description,
-                enabled = WidgetService.Instance.IsEnabled(tool.Id)
-            }).ToList(),
-            music = new
+            widgets = BuildWidgets(),
+            rain = WidgetService.Instance.RainEnabled,            music = new
             {
                 scanning = MusicLibrary.Instance.IsScanning,
                 files = MusicLibrary.Instance.Files.Select(file => new
@@ -311,6 +307,69 @@ internal sealed class WebLibraryForm : Form
         };
 
         Post(payload);
+    }
+
+    private static List<object> BuildWidgets()
+    {
+        var list = new List<object>();
+
+        foreach (WidgetConfig config in WidgetService.Instance.Configs)
+        {
+            string? preview = null;
+            string? file = WidgetPreview.Ensure(config);
+
+            if (file != null)
+            {
+                preview = ToUrl(file) + "?v=" + File.GetLastWriteTimeUtc(file).Ticks;
+            }
+
+            list.Add(new
+            {
+                id = config.Id,
+                type = config.Type,
+                name = config.Name,
+                enabled = config.Enabled,
+                style = config.Style,
+                styleName = WidgetConfig.StyleName(config.Type, config.Style),
+                anchor = config.Anchor,
+                offsetX = config.OffsetX,
+                offsetY = config.OffsetY,
+                posX = config.PosX,
+                posY = config.PosY,
+                width = config.Width,
+                height = config.Height,
+                radius = config.Radius,
+                textColor = config.TextColor,
+                accentColor = config.AccentColor,
+                accentColor2 = config.AccentColor2,
+                bgColor = config.BgColor,
+                bgAlpha = config.BgAlpha,
+                fontFamily = config.FontFamily,
+                fontSize = config.FontSize,
+                clockFormat = config.ClockFormat,
+                dateFormat = config.DateFormat,
+                showWeek = config.ShowWeek,
+                content = config.Content,
+                images = config.Images,
+                carouselSeconds = config.CarouselSeconds,
+                sensitivity = config.Sensitivity,
+                barCount = config.BarCount,
+                preview
+            });
+        }
+
+        return list;
+    }
+
+    /// <summary>只推组件数据，编辑时免得整份壁纸/音乐状态一起重发。</summary>
+    private void PostWidgets()
+    {
+        Post(new
+        {
+            type = "widgets",
+            widgets = BuildWidgets(),
+            rain = WidgetService.Instance.RainEnabled
+        });
     }
 
     private static object BuildPlayer()
@@ -486,6 +545,16 @@ internal sealed class WebLibraryForm : Form
         Post(new { type = "player", player = BuildPlayer() });
     }
 
+    private void OnWidgetsChanged()
+    {
+        if (_disposed || !_ready)
+        {
+            return;
+        }
+
+        PostWidgets();
+    }
+
     private static string ToUrl(string fullPath)
     {
         string relative = Path.GetRelativePath(AppPaths.BaseDir, fullPath).Replace('\\', '/');
@@ -586,11 +655,52 @@ internal sealed class WebLibraryForm : Form
                     AssignTrack(GetString(root, "path"));
                     break;
 
-                case "setTool":
+                case "addWidget":
+                    WidgetService.Instance.Add(GetString(root, "kind"));
+                    PostWidgets();
+                    break;
+
+                case "updateWidget":
+                    if (root.TryGetProperty("widget", out JsonElement widgetElement))
+                    {
+                        WidgetService.Instance.Update(WidgetConfig.FromJson(widgetElement.GetRawText()));
+                    }
+
+                    PostWidgets();
+                    break;
+
+                case "beginWidgetDrag":
+                    WidgetService.Instance.SetDragMode(GetString(root, "id"));
+                    break;
+
+                case "endWidgetDrag":
+                    WidgetService.Instance.SetDragMode(null);
+                    break;
+
+                case "deleteWidget":
+                    WidgetService.Instance.Remove(GetString(root, "id"));
+                    PostWidgets();
+                    break;
+
+                case "setWidgetEnabled":
                     WidgetService.Instance.SetEnabled(
                         GetString(root, "id"),
-                        root.TryGetProperty("enabled", out JsonElement enabled) && enabled.GetBoolean());
-                    PushState();
+                        root.TryGetProperty("enabled", out JsonElement widgetEnabled) && widgetEnabled.GetBoolean());
+                    PostWidgets();
+                    break;
+
+                case "setRain":
+                    WidgetService.Instance.SetRainEnabled(
+                        root.TryGetProperty("enabled", out JsonElement rainEnabled) && rainEnabled.GetBoolean());
+                    PostWidgets();
+                    break;
+
+                case "pickWidgetImages":
+                    PickWidgetImages(GetString(root, "id"));
+                    break;
+
+                case "clearWidgetImages":
+                    WidgetService.Instance.SetImages(GetString(root, "id"), Array.Empty<string>());
                     break;
 
                 case "rescanWallpapers":
@@ -810,6 +920,21 @@ internal sealed class WebLibraryForm : Form
         }
     }
 
+    private void PickWidgetImages(string id)
+    {
+        using var dialog = new OpenFileDialog
+        {
+            Title = "选择组件图片",
+            Filter = "图片|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp",
+            Multiselect = true
+        };
+
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            WidgetService.Instance.SetImages(id, dialog.FileNames);
+        }
+    }
+
     private static void OpenFolder(string path)
     {
         try
@@ -853,6 +978,7 @@ internal sealed class WebLibraryForm : Form
             PreviewFrames.Ready -= OnPreviewReady;
             MusicPlayer.Instance.StateChanged -= OnPlayerChanged;
             MusicArtwork.Ready -= OnPlayerChanged;
+            WidgetService.Instance.Changed -= OnWidgetsChanged;
             _playerTimer.Stop();
             _playerTimer.Dispose();
             _resizeTimer.Stop();

@@ -1,15 +1,17 @@
+using System.Text;
+
 namespace MINWallPaper.Native;
 
 /// <summary>把窗口挂到 Windows 桌面壁纸层（桌面图标下方）。</summary>
 internal static class DesktopHost
 {
     /// <summary>
-    /// 返回承载壁纸的宿主窗口，并把目标窗口挂上去。
+    /// 找到当前承载壁纸的宿主窗口。
     /// 兼容两种系统行为：
     ///   1. Win11 24H2 之后：WorkerW 是 Progman 的子窗口；
     ///   2. 更早版本：WorkerW 是顶层窗口，紧跟在 SHELLDLL_DefView 所在窗口之后。
     /// </summary>
-    public static IntPtr Attach(IntPtr window)
+    public static IntPtr FindHost()
     {
         IntPtr progman = NativeMethods.FindWindow("Progman", null);
 
@@ -28,7 +30,14 @@ internal static class DesktopHost
             workerw = FindWorkerWBehindDesktopIcons();
         }
 
-        IntPtr host = workerw != IntPtr.Zero ? workerw : progman;
+        return workerw != IntPtr.Zero ? workerw : progman;
+    }
+
+    /// <summary>把目标窗口挂到当前桌面宿主，并压到宿主里合适的位置。</summary>
+    public static IntPtr Attach(IntPtr window)
+    {
+        IntPtr host = FindHost();
+
         if (host == IntPtr.Zero)
         {
             throw new InvalidOperationException("找不到桌面宿主窗口，无法挂载壁纸。");
@@ -36,10 +45,24 @@ internal static class DesktopHost
 
         NativeMethods.SetParent(window, host);
 
-        // 压到宿主的最底层，确保不会盖住桌面图标。
-        NativeMethods.SetWindowPos(window, NativeMethods.HWND_BOTTOM, 0, 0, 0, 0,
+        // WorkerW 里可能还有系统自己的壁纸层：放到最上面才不会被盖住。
+        // 回退到 Progman 时桌面图标在同一层级，仍然压到底部避免挡图标。
+        IntPtr insertAfter = IsWorkerW(host) ? IntPtr.Zero : new IntPtr(1);
+        NativeMethods.SetWindowPos(window, insertAfter, 0, 0, 0, 0,
             NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
         return host;
+    }
+
+    public static bool IsWorkerW(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var name = new StringBuilder(32);
+        NativeMethods.GetClassName(hwnd, name, name.Capacity);
+        return name.ToString() == "WorkerW";
     }
 
     /// <summary>Win11 24H2+：WorkerW 直接挂在 Progman 下面。</summary>
