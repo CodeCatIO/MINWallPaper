@@ -39,6 +39,7 @@ internal sealed class WebLibraryForm : Form
     public WebLibraryForm()
     {
         Text = "MINWallPaper";
+        Icon = AppIcon.Value;
         FormBorderStyle = FormBorderStyle.None;
         ClientSize = new Size(1180, 740);
         MinimumSize = new Size(880, 600);

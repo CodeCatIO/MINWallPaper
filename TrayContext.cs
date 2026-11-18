@@ -22,7 +22,7 @@ internal sealed class TrayContext : ApplicationContext
 
         _tray = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = AppIcon.Value,
             Visible = true,
             Text = "MINWallPaper"
         };

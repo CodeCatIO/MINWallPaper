@@ -47,6 +47,8 @@
 
 ## 下载
 
+下载 `MINWallPaper-1.1.1-setup.exe`，双击安装即可，安装到当前用户目录，不需要管理员权限。
+
 - 个人主页：<https://codecatio.github.io/home/#/tools/minwallpaper>
 - GitHub Releases：<https://github.com/CodeCatIO/MINWallPaper/releases>
 - Gitee Releases：<https://gitee.com/codecatio/minwallpaper/releases>
@@ -63,11 +65,13 @@
 dotnet build -c Release
 ```
 
-发布为不包含运行时的压缩包：
+发布为不包含运行时的文件：
 
 ```powershell
 dotnet publish -c Release --self-contained false -o publish
 ```
+
+生成安装包：用 Inno Setup 6 打开并编译 [installer/MINWallPaper.iss](installer/MINWallPaper.iss)，输出在 `dist/MINWallPaper-<版本>-setup.exe`。
 
 运行后会在 exe 旁边生成 `data` 目录：
 
@@ -83,6 +87,8 @@ data/
 ## 项目结构
 
 ```
+Assets/       应用图标
+installer/    Inno Setup 安装包脚本
 Music/        音乐库、播放器、播放列表、封面提取、歌词
 Native/       Win32 窗口样式、DWM 等原生调用
 Pages/        WebView2 与前端之间的消息通道
