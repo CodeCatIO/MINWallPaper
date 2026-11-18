@@ -3,6 +3,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
@@ -795,11 +796,64 @@ internal sealed class WebLibraryForm : Form
             MusicPlayer.Instance.Mode, "本地音乐");
     }
 
-    /// <summary>按歌曲所在文件夹归类；目前只区分周杰伦、许嵩，其余都进「其他」。</summary>
+    /// <summary>不像歌手名的文件夹名，遇到这些再去看文件名。</summary>
+    private static readonly HashSet<string> NonArtistFolders = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "files", "music", "songs", "audio", "download", "downloads",
+        "english", "other", "others", "unknown", "various artists", "va",
+        "音乐", "歌曲", "我的音乐", "未分类", "其他", "群星", "合集", "精选"
+    };
+
+    /// <summary>
+    /// 自动识别歌手：优先用歌曲所在的歌手文件夹（周杰伦、许嵩这种），
+    /// 文件夹不像歌手名时，再从文件名尾部的“- 歌手”里取。
+    /// </summary>
     private static string ArtistOf(string path)
     {
-        string folder = Path.GetFileName(Path.GetDirectoryName(path) ?? "");
-        return folder is "周杰伦" or "许嵩" ? folder : "其他";
+        string folder = Path.GetFileName(Path.GetDirectoryName(path) ?? "").Trim();
+
+        if (!string.IsNullOrEmpty(folder) && !NonArtistFolders.Contains(folder))
+        {
+            return folder;
+        }
+
+        string artist = ArtistFromFileName(Path.GetFileNameWithoutExtension(path));
+        return string.IsNullOrWhiteSpace(artist) ? "其他" : artist;
+    }
+
+    private static string ArtistFromFileName(string fileName)
+    {
+        // 去掉开头的音轨号，例如 “01. ”、“02 - ”。
+        string name = Regex.Replace(fileName, @"^\s*\d{1,3}\s*[\.\-_、]\s*", "");
+
+        // “歌名 - 歌手” 带空格的横线最可靠。
+        string[] parts = name.Split(" - ", StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+        {
+            return CleanArtist(parts[^1]);
+        }
+
+        // “歌名-歌手” 或 “歌手A-歌名-歌手B” 这种没有空格的，默认取最后一段。
+        parts = name.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+        {
+            return CleanArtist(parts[^1]);
+        }
+
+        return "";
+    }
+
+    private static string CleanArtist(string value)
+    {
+        // 去掉尾部括号里的版本说明，例如 “周杰伦 (Live)”。
+        string artist = Regex.Replace(value.Trim(), @"\s*[\(\[（【].*?[\)\]）】]\s*$", "").Trim();
+
+        if (artist.Length == 0 || artist.Length > 24 || artist.All(char.IsDigit))
+        {
+            return "";
+        }
+
+        return artist;
     }
 
     private static void PlayArtist(string artist, string? path)
