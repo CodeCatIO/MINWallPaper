@@ -65,7 +65,7 @@ internal sealed class WidgetService
 
     public WidgetConfig Add(string type)
     {
-        type = type is "wave" or "text" or "cpu" or "memory" or "gpu" or "disk" or "image"
+        type = type is "wave" or "text" or "cpu" or "memory" or "gpu" or "disk" or "image" or "date"
             ? type
             : "clock";
         int sameType = _configs.Count(c => c.Type == type);

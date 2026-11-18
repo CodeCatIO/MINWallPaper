@@ -55,6 +55,12 @@ internal static class WidgetPainter
             return;
         }
 
+        if (config.Type == "date")
+        {
+            DatePainter.Paint(g, size, config);
+            return;
+        }
+
         ClockPainter.Paint(g, size, config);
     }
 
@@ -79,6 +85,23 @@ internal static class PaintKit
 {
     private static readonly HashSet<string> Installed = new(
         FontFamily.Families.Select(f => f.Name), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>签名手写体：优先 Edwardian Script，其次 Segoe Script / Ink Free。</summary>
+    public static string ScriptFamily { get; } =
+        ResolveFamily("Edwardian Script ITC", "Segoe Script", "Ink Free");
+
+    private static string ResolveFamily(params string[] families)
+    {
+        foreach (string family in families)
+        {
+            if (Installed.Contains(family))
+            {
+                return family;
+            }
+        }
+
+        return "Microsoft YaHei UI";
+    }
 
     public static Font CreateFont(string family, float pixelSize, FontStyle style = FontStyle.Regular)
     {
@@ -108,6 +131,79 @@ internal static class PaintKit
 
         using var brush = new SolidBrush(color);
         g.DrawString(text, font, brush, rect, format);
+    }
+
+    /// <summary>镀金渐变文字：深色投影 + 明暗交替的金属渐变。</summary>
+    public static void DrawGoldText(Graphics g, string text, Font font, RectangleF rect,
+        StringAlignment horizontal = StringAlignment.Center, StringAlignment vertical = StringAlignment.Center,
+        int alpha = 255)
+    {
+        if (string.IsNullOrEmpty(text) || rect.Width < 2 || rect.Height < 2)
+        {
+            return;
+        }
+
+        alpha = Math.Clamp(alpha, 0, 255);
+        if (alpha == 0)
+        {
+            return;
+        }
+
+        using var format = new StringFormat(StringFormat.GenericTypographic)
+        {
+            Alignment = horizontal,
+            LineAlignment = vertical,
+            FormatFlags = StringFormatFlags.NoWrap,
+            Trimming = StringTrimming.EllipsisCharacter
+        };
+
+        using (var shadow = new SolidBrush(Color.FromArgb(alpha * 45 / 255, 0, 0, 0)))
+        {
+            g.DrawString(text, font, shadow,
+                new RectangleF(rect.X + 1.5f, rect.Y + 2f, rect.Width, rect.Height), format);
+        }
+
+        // 香槟金 → 足金 → 古铜 → 高光 → 暗金，模拟金属反光带。
+        using var brush = new LinearGradientBrush(rect, Color.White, Color.White, 90f);
+        brush.InterpolationColors = new ColorBlend
+        {
+            Colors = new[]
+            {
+                Color.FromArgb(alpha, 255, 244, 190),
+                Color.FromArgb(alpha, 240, 200, 90),
+                Color.FromArgb(alpha, 176, 120, 34),
+                Color.FromArgb(alpha, 255, 226, 140),
+                Color.FromArgb(alpha, 150, 100, 26)
+            },
+            Positions = new[] { 0f, 0.3f, 0.55f, 0.78f, 1f }
+        };
+
+        g.DrawString(text, font, brush, rect, format);
+    }
+
+    /// <summary>是否是手写体字体，文字组件会自动加斜体让它更像签名。</summary>
+    public static bool IsScript(string? family)
+    {
+        if (string.IsNullOrWhiteSpace(family))
+        {
+            return false;
+        }
+
+        string[] scripts =
+        {
+            "Edwardian Script ITC", "Segoe Script", "Ink Free",
+            "Freestyle Script", "Brush Script MT", "Lucida Handwriting"
+        };
+
+        foreach (string name in scripts)
+        {
+            if (string.Equals(name, family, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>按字距逐字绘制，做出细体钟那种疏朗的排版。</summary>

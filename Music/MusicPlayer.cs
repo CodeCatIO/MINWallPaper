@@ -18,7 +18,10 @@ internal sealed class MusicPlayer
     private WaveOutEvent? _output;
     private WaveStream? _reader;
     private readonly List<string> _queue = new();
-    private int _index = -1;
+
+    /// <summary>实际播放顺序，元素是 _queue 的下标；随机模式就是一份打乱后的列表。</summary>
+    private readonly List<int> _order = new();
+    private int _pos = -1;
     private MusicLoopMode _mode = MusicLoopMode.List;
     private float _volume = 0.5f;
     private bool _muted;
@@ -32,7 +35,10 @@ internal sealed class MusicPlayer
     public event Action? StateChanged;
 
     public string? CurrentPath =>
-        _index >= 0 && _index < _queue.Count ? _queue[_index] : null;
+        _pos >= 0 && _pos < _order.Count ? _queue[_order[_pos]] : null;
+
+    private int CurrentQueueIndex =>
+        _pos >= 0 && _pos < _order.Count ? _order[_pos] : -1;
 
     public string CurrentTitle =>
         CurrentPath == null ? "" : Path.GetFileNameWithoutExtension(CurrentPath);
@@ -61,9 +67,27 @@ internal sealed class MusicPlayer
 
         _queue.Clear();
         _queue.AddRange(tracks);
-        _index = Math.Clamp(startIndex, 0, _queue.Count - 1);
         _mode = mode;
         QueueName = queueName;
+
+        int start = Math.Clamp(startIndex, 0, _queue.Count - 1);
+        _order.Clear();
+
+        if (mode == MusicLoopMode.Shuffle)
+        {
+            // 随机模式：点中的歌先播，其余打乱，形成一份乱序播放列表。
+            _order.Add(start);
+            List<int> rest = Enumerable.Range(0, _queue.Count).Where(i => i != start).ToList();
+            Shuffle(rest);
+            _order.AddRange(rest);
+            _pos = 0;
+        }
+        else
+        {
+            _order.AddRange(Enumerable.Range(0, _queue.Count));
+            _pos = start;
+        }
+
         StartCurrent();
     }
 
@@ -103,27 +127,13 @@ internal sealed class MusicPlayer
             return;
         }
 
-        if (_mode == MusicLoopMode.Shuffle && _queue.Count > 1)
-        {
-            int next;
-            do
-            {
-                next = _random.Next(_queue.Count);
-            } while (next == _index);
-
-            _index = next;
-        }
-        else
-        {
-            _index = (_index + 1) % _queue.Count;
-        }
-
+        Advance();
         StartCurrent();
     }
 
     public void Previous()
     {
-        if (_queue.Count == 0)
+        if (_queue.Count == 0 || _order.Count == 0)
         {
             return;
         }
@@ -134,12 +144,87 @@ internal sealed class MusicPlayer
             return;
         }
 
-        _index = _index <= 0 ? _queue.Count - 1 : _index - 1;
+        _pos = _pos <= 0 ? _order.Count - 1 : _pos - 1;
         StartCurrent();
+    }
+
+    /// <summary>往后走一首：随机模式下就是走到乱序列表的下一项。</summary>
+    private void Advance()
+    {
+        if (_queue.Count == 0 || _order.Count == 0)
+        {
+            return;
+        }
+
+        if (_mode == MusicLoopMode.Shuffle)
+        {
+            int last = CurrentQueueIndex;
+            _pos++;
+
+            if (_pos >= _order.Count)
+            {
+                // 一轮播完，重新洗牌；避免新一轮第一首还是刚播完的那首。
+                BuildShuffleBag(last);
+                _pos = 0;
+            }
+
+            return;
+        }
+
+        _pos = _pos < 0 ? 0 : (_pos + 1) % _order.Count;
+    }
+
+    private void BuildShuffleBag(int avoidFirst)
+    {
+        _order.Clear();
+        _order.AddRange(Enumerable.Range(0, _queue.Count));
+        Shuffle(_order);
+
+        if (_order.Count > 1 && _order[0] == avoidFirst)
+        {
+            int swap = 1 + _random.Next(_order.Count - 1);
+            (_order[0], _order[swap]) = (_order[swap], _order[0]);
+        }
+    }
+
+    private void Shuffle(List<int> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = _random.Next(i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
     }
 
     public void SetMode(MusicLoopMode mode)
     {
+        if (_queue.Count > 0 && mode != _mode)
+        {
+            int current = CurrentQueueIndex;
+
+            if (mode == MusicLoopMode.Shuffle)
+            {
+                // 已经播过的不再进入剩余列表，剩下的才洗牌。
+                List<int> played = _order.Take(Math.Max(0, _pos + 1)).ToList();
+                var playedSet = new HashSet<int>(played);
+                List<int> remaining = Enumerable.Range(0, _queue.Count)
+                    .Where(i => !playedSet.Contains(i)).ToList();
+                Shuffle(remaining);
+
+                _order.Clear();
+                _order.AddRange(played);
+                _order.AddRange(remaining);
+                _pos = played.Count - 1;
+            }
+            else
+            {
+                // 退出随机时恢复原始顺序，并定位到正在播放的歌。
+                _order.Clear();
+                _order.AddRange(Enumerable.Range(0, _queue.Count));
+                _pos = current >= 0 ? _order.IndexOf(current) : -1;
+            }
+        }
+
         _mode = mode;
         StateChanged?.Invoke();
     }
@@ -184,7 +269,8 @@ internal sealed class MusicPlayer
     {
         StopInternal();
         _queue.Clear();
-        _index = -1;
+        _order.Clear();
+        _pos = -1;
         QueueName = "";
         StateChanged?.Invoke();
     }
@@ -241,21 +327,8 @@ internal sealed class MusicPlayer
                 StartCurrent();
                 break;
 
-            case MusicLoopMode.Shuffle when _queue.Count > 1:
-            {
-                int next;
-                do
-                {
-                    next = _random.Next(_queue.Count);
-                } while (next == _index);
-
-                _index = next;
-                StartCurrent();
-                break;
-            }
-
             default:
-                _index = (_index + 1) % _queue.Count;
+                Advance();
                 StartCurrent();
                 break;
         }

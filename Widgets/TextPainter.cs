@@ -25,7 +25,16 @@ internal static class TextPainter
 
         float pad = Math.Max(8f, w * 0.06f);
         FontStyle style = c.Style == "outline" ? FontStyle.Bold : FontStyle.Regular;
+
+        if (PaintKit.IsScript(c.FontFamily))
+        {
+            style |= FontStyle.Italic;
+        }
+
         using Font font = PaintKit.FitFont(g, text, c.FontFamily, style, c.FontSize, w - pad * 2);
+
+        int alpha = (int)Math.Round(Math.Clamp(c.TextAlpha, 0, 1) * 255);
+        Color color = PaintKit.Alpha(c.Text, alpha);
 
         float th = font.GetHeight(g);
         float top = (h - th) / 2f;
@@ -33,23 +42,33 @@ internal static class TextPainter
         switch (c.Style)
         {
             case "spaced":
-                PaintKit.DrawSpacedText(g, text, font, c.Text, w / 2f, top, c.FontSize * 0.1f);
+                PaintKit.DrawSpacedText(g, text, font, color, w / 2f, top, c.FontSize * 0.1f);
                 break;
             case "glow":
-                PaintGlow(g, w, text, font, c, top, th);
+                PaintGlow(g, w, text, font, c, top, th, alpha);
                 break;
             case "outline":
-                PaintOutline(g, w, text, font, c, top, th);
+                PaintOutline(g, w, text, font, c, top, th, alpha);
                 break;
             default:
-                PaintKit.DrawText(g, text, font, c.Text, new RectangleF(0, top, w, th),
-                    StringAlignment.Center, StringAlignment.Center);
+                var rect = new RectangleF(0, top, w, th);
+                if (c.GoldText)
+                {
+                    PaintKit.DrawGoldText(g, text, font, rect, StringAlignment.Center,
+                        StringAlignment.Center, alpha);
+                }
+                else
+                {
+                    PaintKit.DrawText(g, text, font, color, rect,
+                        StringAlignment.Center, StringAlignment.Center);
+                }
+
                 break;
         }
     }
 
     private static void PaintGlow(Graphics g, int w, string text, Font font, WidgetConfig c, float top,
-        float th)
+        float th, int alpha)
     {
         (float Dx, float Dy, int Alpha)[] glow =
         {
@@ -58,18 +77,26 @@ internal static class TextPainter
 
         var rect = new RectangleF(0, top, w, th);
 
-        foreach ((float dx, float dy, int alpha) in glow)
+        foreach ((float dx, float dy, int layerAlpha) in glow)
         {
-            PaintKit.DrawText(g, text, font, PaintKit.Alpha(c.Accent, alpha),
+            PaintKit.DrawText(g, text, font, PaintKit.Alpha(c.Accent, layerAlpha * alpha / 255),
                 new RectangleF(rect.X + dx, rect.Y + dy, rect.Width, rect.Height),
                 StringAlignment.Center, StringAlignment.Center);
         }
 
-        PaintKit.DrawText(g, text, font, c.Text, rect, StringAlignment.Center, StringAlignment.Center);
+        if (c.GoldText)
+        {
+            PaintKit.DrawGoldText(g, text, font, rect, StringAlignment.Center,
+                StringAlignment.Center, alpha);
+            return;
+        }
+
+        PaintKit.DrawText(g, text, font, PaintKit.Alpha(c.Text, alpha), rect,
+            StringAlignment.Center, StringAlignment.Center);
     }
 
     private static void PaintOutline(Graphics g, int w, string text, Font font, WidgetConfig c, float top,
-        float th)
+        float th, int alpha)
     {
         using var path = new GraphicsPath();
         using (var format = new StringFormat(StringFormat.GenericTypographic))
@@ -92,11 +119,15 @@ internal static class TextPainter
         {
             ghostMatrix.Translate(3, 4);
             ghost.Transform(ghostMatrix);
-            using var brush = new SolidBrush(PaintKit.Alpha(c.Accent, 70));
+            using var brush = new SolidBrush(PaintKit.Alpha(c.Accent, 70 * alpha / 255));
             g.FillPath(brush, ghost);
         }
 
-        using (var pen = new Pen(c.Text, Math.Max(1.2f, c.FontSize * 0.05f)))
+        Color stroke = c.GoldText
+            ? Color.FromArgb(alpha, 218, 170, 60)
+            : PaintKit.Alpha(c.Text, alpha);
+
+        using (var pen = new Pen(stroke, Math.Max(1.2f, c.FontSize * 0.05f)))
         {
             g.DrawPath(pen, path);
         }

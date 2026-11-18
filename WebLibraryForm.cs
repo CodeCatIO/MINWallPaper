@@ -298,6 +298,7 @@ internal sealed class WebLibraryForm : Form
                 {
                     path = file.Path,
                     title = file.Title,
+                    artist = ArtistOf(file.Path),
                     sizeBytes = file.SizeBytes,
                     duration = file.Duration.TotalSeconds,
                     url = ToUrl(file.Path)
@@ -362,6 +363,10 @@ internal sealed class WebLibraryForm : Form
                 bgAlpha = config.BgAlpha,
                 fontFamily = config.FontFamily,
                 fontSize = config.FontSize,
+                textAlpha = config.TextAlpha,
+                goldText = config.GoldText,
+                signatureColor = config.SignatureColor,
+                signatureAlpha = config.SignatureAlpha,
                 clockFormat = config.ClockFormat,
                 dateFormat = config.DateFormat,
                 showWeek = config.ShowWeek,
@@ -659,6 +664,10 @@ internal sealed class WebLibraryForm : Form
                     PlayLocal(GetInt(root, "index"));
                     break;
 
+                case "playArtist":
+                    PlayArtist(GetString(root, "artist"), GetString(root, "path"));
+                    break;
+
                 case "playPlaylist":
                     PlayPlaylist(GetString(root, "id"));
                     break;
@@ -786,6 +795,39 @@ internal sealed class WebLibraryForm : Form
             MusicPlayer.Instance.Mode, "本地音乐");
     }
 
+    /// <summary>按歌曲所在文件夹归类；目前只区分周杰伦、许嵩，其余都进「其他」。</summary>
+    private static string ArtistOf(string path)
+    {
+        string folder = Path.GetFileName(Path.GetDirectoryName(path) ?? "");
+        return folder is "周杰伦" or "许嵩" ? folder : "其他";
+    }
+
+    private static void PlayArtist(string artist, string? path)
+    {
+        var files = MusicLibrary.Instance.Files
+            .Where(f => ArtistOf(f.Path) == artist)
+            .ToList();
+
+        if (files.Count == 0)
+        {
+            return;
+        }
+
+        int index = 0;
+        if (!string.IsNullOrEmpty(path))
+        {
+            int hit = files.FindIndex(f => string.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase));
+            if (hit >= 0)
+            {
+                index = hit;
+            }
+        }
+
+        MusicPlayer.Instance.PlayQueue(
+            files.Select(f => f.Path).ToList(), index,
+            MusicPlayer.Instance.Mode, artist);
+    }
+
     private static void PlayPlaylist(string playlistId)
     {
         MusicPlaylist? playlist = MusicLibrary.Instance.Playlists.FirstOrDefault(p => p.Id == playlistId);
@@ -793,7 +835,7 @@ internal sealed class WebLibraryForm : Form
         {
             MusicPlayer.Instance.PlayQueue(
                 playlist.Tracks.Select(t => t.Path).ToList(), 0,
-                MusicLoopMode.List, playlist.Name);
+                MusicPlayer.Instance.Mode, playlist.Name);
         }
     }
 

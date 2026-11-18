@@ -15,7 +15,7 @@ internal sealed class WidgetConfig
 {
     public string Id { get; set; } = "";
 
-    /// <summary>clock 或 wave。</summary>
+    /// <summary>clock / date / wave / text / cpu / memory / gpu / disk / image。</summary>
     public string Type { get; set; } = "clock";
 
     public string Name { get; set; } = "";
@@ -38,6 +38,16 @@ internal sealed class WidgetConfig
 
     public string FontFamily { get; set; } = "Microsoft YaHei UI";
     public int FontSize { get; set; } = 34;
+
+    /// <summary>文字不透明度 0~1（只影响文字，不影响背景）。</summary>
+    public double TextAlpha { get; set; } = 1;
+
+    /// <summary>文本组件是否使用镀金渐变。</summary>
+    public bool GoldText { get; set; }
+
+    /// <summary>签名手写体的颜色和浓度。</summary>
+    public string SignatureColor { get; set; } = "#FFD700";
+    public double SignatureAlpha { get; set; } = 0.8;
 
     public string ClockFormat { get; set; } = "HH:mm";
     public string DateFormat { get; set; } = "M月d日";
@@ -100,6 +110,30 @@ internal sealed class WidgetConfig
                 FontSize = 26,
                 Content = "今天也要加油",
                 AccentColor = "#8B7BFF"
+            };
+        }
+
+        if (type == "date")
+        {
+            return new WidgetConfig
+            {
+                Id = NewId(),
+                Type = "date",
+                Name = "日期 " + (index + 1),
+                Style = "script",
+                Anchor = "top-left",
+                OffsetX = 48,
+                OffsetY = 48,
+                Width = 300,
+                Height = 132,
+                Radius = 18,
+                BgAlpha = 0,
+                FontSize = 36,
+                TextAlpha = 1,
+                SignatureColor = "#FFD700",
+                SignatureAlpha = 0.8,
+                DateFormat = "en",
+                ShowWeek = false
             };
         }
 
@@ -205,6 +239,7 @@ internal sealed class WidgetConfig
             "gpu" => "gpu",
             "disk" => "disk",
             "image" => "image",
+            "date" => "date",
             _ => "clock"
         };
         Width = Math.Clamp(Width, 120, 1600);
@@ -212,6 +247,9 @@ internal sealed class WidgetConfig
         Radius = Math.Clamp(Radius, 0, 80);
         FontSize = Math.Clamp(FontSize, 8, 180);
         BgAlpha = Math.Clamp(BgAlpha, 0, 1);
+        TextAlpha = Math.Clamp(TextAlpha, 0, 1);
+        SignatureAlpha = Math.Clamp(SignatureAlpha, 0, 1);
+        SignatureColor = string.IsNullOrWhiteSpace(SignatureColor) ? "#FFD700" : SignatureColor;
         BarCount = Math.Clamp(BarCount, 8, 96);
         OffsetX = Math.Clamp(OffsetX, -4000, 4000);
         OffsetY = Math.Clamp(OffsetY, -4000, 4000);
@@ -235,6 +273,7 @@ internal sealed class WidgetConfig
     }
 
     public Color Text => ParseColor(TextColor, Color.FromArgb(245, 246, 250));
+    public Color Signature => ParseColor(SignatureColor, Color.FromArgb(255, 215, 0));
     public Color Accent => ParseColor(AccentColor, Color.FromArgb(139, 123, 255));
     public Color Accent2 => ParseColor(AccentColor2, Color.FromArgb(70, 226, 168));
     public Color Bg => ParseColor(BgColor, Color.FromArgb(18, 20, 26));
@@ -342,6 +381,13 @@ internal sealed class WidgetConfig
             return "";
         }
 
+        if (pattern is "en" or "enWeek")
+        {
+            string month = now.ToString("MMMM", CultureInfo.InvariantCulture).ToLowerInvariant();
+            string weekday = now.ToString("dddd", CultureInfo.InvariantCulture).ToLowerInvariant();
+            return pattern == "enWeek" ? weekday : $"{now.Day} {month}";
+        }
+
         var builder = new StringBuilder();
 
         for (int i = 0; i < pattern.Length;)
@@ -416,6 +462,7 @@ internal sealed class WidgetConfig
             "gpu" => GpuStyles,
             "disk" => DiskStyles,
             "image" => ImageStyles,
+            "date" => DateStyles,
             _ => ClockStyles
         };
 
@@ -441,7 +488,14 @@ internal sealed class WidgetConfig
         ("capsule", "渐变胶囊"),
         ("led", "点阵 LED"),
         ("poster", "海报"),
-        ("outline", "描边")
+        ("outline", "描边"),
+        ("signature", "签名手写")
+    };
+
+    public static readonly (string Id, string Name)[] DateStyles =
+    {
+        ("script", "签名手写"),
+        ("minimal", "极简细体")
     };
 
     public static readonly (string Id, string Name)[] WaveStyles =

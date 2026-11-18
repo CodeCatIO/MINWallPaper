@@ -1177,13 +1177,30 @@
   }
   .player .sub { color: #6b7178; font-size: 12px; text-align: center; margin-top: 4px; }
   .progress {
+    position: relative;
     height: 4px;
     background: rgba(30, 36, 42, .14);
     border-radius: 2px;
     margin-top: 16px;
     cursor: pointer;
   }
-  .progress #progressFill { height: 100%; width: 0; background: var(--brand); border-radius: 2px; }
+  .progress #progressFill { height: 100%; width: 0; background: #0080FF; border-radius: 2px; }
+  .progress .thumb {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #0080FF;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+    transform: translate(-50%, -50%);
+    transition: width .15s, height .15s;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .progress:hover .thumb, .progress.dragging .thumb { width: 14px; height: 14px; }
   .times { display: flex; justify-content: space-between; color: #7a8088; font-size: 11px; margin-top: 6px; }
   .player input[type="range"] { background: #c9cdd2; }
   .player input[type="range"]::-webkit-slider-thumb {
@@ -1382,6 +1399,71 @@
     opacity: 1;
   }
 
+  /* ---------- 斜方形播放按钮：蓝色 #0080FF，悬停 #FF8000 ---------- */
+  .gbtn-wrap {
+    border-radius: 14px;
+    transform: rotate(-6deg) skewX(-6deg);
+  }
+  .gbtn-wrap.small { border-radius: 10px; }
+  .gbtn-shadow { display: none; }
+
+  .gbtn {
+    border-radius: 14px;
+    background: #0080FF;
+    box-shadow:
+      0 6px 16px rgba(0, 128, 255, .35),
+      inset 0 0 0 1px rgba(255, 255, 255, .18);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    overflow: hidden;
+    transition: background .3s, box-shadow .3s, transform .18s;
+  }
+  .gbtn-wrap.small .gbtn { border-radius: 10px; }
+
+  /* 悬停时从中间扩散的橙色圆 */
+  .gbtn::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: #FF8000;
+    transform: translate(-50%, -50%);
+    transition: width .45s ease, height .45s ease;
+    z-index: 0;
+  }
+  .gbtn:hover::before { width: 240%; height: 240%; }
+
+  .gbtn::after { display: none; }
+  .gbtn:hover {
+    transform: scale(.97);
+    background: #0080FF;
+    box-shadow:
+      0 8px 22px rgba(255, 128, 0, .45),
+      inset 0 0 0 1px rgba(255, 255, 255, .22);
+  }
+
+  .gbtn .glyph {
+    color: #fff;
+    text-shadow: none;
+    transform: skewX(6deg) rotate(6deg);
+    z-index: 2;
+  }
+  /* 两块半透明弧面，模仿参考按钮的装饰 */
+  .gbtn .glyph::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 90% at -10% 110%, rgba(255, 255, 255, .18), transparent 55%),
+      radial-gradient(100% 80% at 110% -10%, rgba(255, 255, 255, .14), transparent 55%);
+  }
+  .gbtn .glyph::after { display: none; }
+
   @property --angle-1 {
     syntax: "<angle>";
     inherits: false;
@@ -1476,6 +1558,7 @@
 
   .immo-left { min-height: 0; display: flex; flex-direction: column; gap: 10px; }
   .immo-tabs {
+    position: relative;
     display: flex;
     gap: 4px;
     padding: 4px;
@@ -1486,15 +1569,83 @@
     flex: 0 0 auto;
   }
   .immo-tabs button {
+    position: relative;
+    z-index: 1;
     flex: 1;
     padding: 8px 0;
     border-radius: 999px;
     color: #5c6670;
     font-size: 12.5px;
-    transition: background .16s, color .16s;
+    transition: color .16s;
+    background: transparent;
   }
   .immo-tabs button:hover { color: #232930; }
-  .immo-tabs button.active { background: #232930; color: #fff; }
+  .immo-tabs button.active { background: transparent; color: #fff; }
+  .immo-tab-ind {
+    position: absolute;
+    z-index: 0;
+    top: 4px;
+    bottom: 4px;
+    left: 0;
+    width: 0;
+    border-radius: 999px;
+    background: #232930;
+    transition: transform .42s cubic-bezier(.34, 1.45, .5, 1),
+      width .42s cubic-bezier(.34, 1.45, .5, 1);
+    pointer-events: none;
+  }
+
+  @keyframes immoIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  .immo-list.immo-in { animation: immoIn .32s cubic-bezier(.22, 1, .36, 1); }
+
+  .artist-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 2px 2px 8px;
+  }
+  .artist-card {
+    min-height: 116px;
+    padding: 12px 8px;
+    border-radius: 17px;
+    border: 1px solid #fff;
+    background: rgba(217, 217, 217, .58);
+    box-shadow: 12px 17px 51px rgba(0, 0, 0, .22);
+    backdrop-filter: blur(6px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .5s;
+    user-select: none;
+    font-weight: 700;
+    color: #151a1e;
+  }
+  .artist-card:hover { border-color: #000; transform: scale(1.05); }
+  .artist-card:active { transform: scale(.95) rotateZ(1.7deg); }
+  .artist-card .a-mark { font-size: 22px; line-height: 1; opacity: .7; }
+  .artist-card .a-name { font-size: 15px; }
+  .artist-card .a-count { font-size: 11px; font-weight: 500; color: #56616b; }
+
+  .immo-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 8px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .55);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7);
+    color: #4b555f;
+    font-size: 12px;
+  }
+  .immo-back:hover { background: rgba(255, 255, 255, .82); color: #232930; }
 
   .immo-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .immo-list::-webkit-scrollbar { width: 0; }
@@ -1612,8 +1763,8 @@
   .immo-player .gbtn-wrap.small { width: 36px; height: 36px; font-size: 9px; }
   .immo-player .bar { flex: 1 1 auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
   .immo-player .times { display: flex; gap: 8px; color: #4b5560; font-size: 11.5px; flex: 0 0 auto; }
-  .immo-player .progress { flex: 1 1 auto; background: rgba(44, 98, 217, .22); }
-  .immo-player #iFill { background: #2c62d9; }
+  .immo-player .progress { flex: 1 1 auto; background: rgba(0, 128, 255, .22); }
+  .immo-player #iFill { background: #0080FF; }
   .immo-player .modes { margin: 0; flex: 0 0 auto; }
   .immo-player .modes button { background: rgba(255, 255, 255, .55); color: #4b5560; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7); }
   .immo-player .modes button.active { background: #232930; color: #fff; box-shadow: none; }
@@ -1621,7 +1772,7 @@
   .immo-player .vol span { color: #4b5560; }
   .immo-player .vol b { display: none; }
   .immo-player .vol input { min-width: 0; background: rgba(30, 40, 50, .22); }
-  .immo-player .vol input::-webkit-slider-thumb { background: #2c62d9; }
+  .immo-player .vol input::-webkit-slider-thumb { background: #0080FF; }
   .immo-player .vol span, .immo-player .vol b { white-space: nowrap; }
 
   /* ---------- 切换时的漫画擦除 ---------- */
@@ -1785,7 +1936,8 @@
         <div class="tool-add">
           <button class="addbtn primary" id="addWidget">＋ 增加</button>
           <div class="add-menu" id="addMenu" hidden>
-            <button data-kind="clock">时钟<span>时间 · 日期</span></button>
+            <button data-kind="clock">时钟<span>只显示时间</span></button>
+            <button data-kind="date">日期<span>独立日期组件</span></button>
             <button data-kind="wave">音浪<span>系统声音频谱</span></button>
             <button data-kind="text">文本<span>自定义文字</span></button>
             <button data-kind="cpu">CPU<span>占用 · 核心</span></button>
@@ -1850,7 +2002,7 @@
           <h3 id="playerTitle">未在播放</h3>
           <p class="sub" id="playerSub">选一首歌或一个播放列表开始</p>
 
-          <div class="progress" id="progressBar"><div id="progressFill"></div></div>
+          <div class="progress" id="progressBar"><div id="progressFill"></div><span class="thumb" id="progressThumb"></span></div>
           <div class="times"><span id="posText">0:00</span><span id="durText">0:00</span></div>
 
           <div class="controls">
@@ -1911,8 +2063,10 @@
       <div class="immo" id="musicImmo" hidden>
         <aside class="immo-left">
           <div class="immo-tabs" id="immoTabs">
+            <i class="immo-tab-ind" id="immoTabInd"></i>
             <button data-immo-tab="all" class="active">全部音乐</button>
             <button data-immo-tab="playlists">播放列表</button>
+            <button data-immo-tab="artists">歌手</button>
           </div>
           <div class="immo-list" id="immoList"></div>
         </aside>
@@ -1974,7 +2128,7 @@
 
           <div class="bar">
             <div class="times"><span id="iPos">0:00</span></div>
-            <div class="progress" id="iProgress"><div id="iFill"></div></div>
+            <div class="progress" id="iProgress"><div id="iFill"></div><span class="thumb" id="iThumb"></span></div>
             <div class="times"><span id="iDur">0:00</span></div>
           </div>
 
@@ -2031,6 +2185,15 @@
       <div class="ed-field col">
         <label>内容</label>
         <input class="ed-input" id="edContent" maxlength="40" placeholder="输入要显示的文字">
+      </div>
+      <div class="ed-range">
+        <label>不透明度</label>
+        <input type="range" id="edTextAlpha" min="0" max="100" step="1">
+        <b id="edTextAlphaVal">100%</b>
+      </div>
+      <div class="ed-field">
+        <label>镀金文字</label>
+        <label class="ed-switch"><input type="checkbox" id="edGold"><span></span></label>
       </div>
     </section>
 
@@ -2100,6 +2263,11 @@
           <option value="SimHei">黑体</option>
           <option value="SimSun">宋体</option>
           <option value="KaiTi">楷体</option>
+          <option value="Edwardian Script ITC">签名手写 · Edwardian Script</option>
+          <option value="Bodoni MT">MIKU OS 衬线 · Bodoni MT</option>
+          <option value="Segoe Script">手写 · Segoe Script</option>
+          <option value="Ink Free">手写 · Ink Free</option>
+          <option value="Georgia">衬线 · Georgia</option>
           <option value="Segoe UI">Segoe UI</option>
           <option value="Consolas">Consolas</option>
         </select>
@@ -2113,7 +2281,7 @@
 
     <section class="ed-sec" id="edClockSec">
       <h4>时钟</h4>
-      <div class="ed-field">
+      <div class="ed-field" id="edClockFormatField">
         <label>时间格式</label>
         <select class="ed-input" id="edClockFormat">
           <option value="HH:mm">24 小时 · 14:05</option>
@@ -2132,13 +2300,24 @@
           <option value="MM/dd">11/17</option>
           <option value="ddd">周二</option>
           <option value="dddd">星期二</option>
+          <option value="en">18 november</option>
+          <option value="enWeek">thursday</option>
           <option value="none">不显示日期</option>
         </select>
       </div>
-      <div class="ed-field">
+      <div class="ed-field" id="edWeekField">
         <label>星期</label>
         <label class="ed-switch"><input type="checkbox" id="edWeek"><span></span></label>
       </div>
+      <div class="ed-colors" id="edSignatureColorField" style="grid-template-columns: 1fr">
+        <label class="ed-color"><span>签名颜色</span><input type="color" id="edSignatureColor"></label>
+      </div>
+      <div class="ed-range" id="edSignatureAlphaRow">
+        <label>签名浓度</label>
+        <input type="range" id="edSignatureAlpha" min="0" max="100" step="1">
+        <b id="edSignatureAlphaVal">80%</b>
+      </div>
+      <p class="ed-tip" id="edSignatureTip">签名和时间分开调整：签名用上面的颜色和浓度，时间固定走金属镀金渐变。</p>
     </section>
   </div>
 
@@ -2174,6 +2353,7 @@
     maximized: false,
     immersive: false,
     immoTab: 'all',
+    immoArtist: null,
     lyrics: [],
     lyricsFor: '',
     lyricActive: -1,
@@ -2266,16 +2446,22 @@
     document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b === btn));
     document.querySelectorAll('.page').forEach(p => p.hidden = p.id !== 'page-' + btn.dataset.page);
     syncNavIndicator(true);
+
+    if (btn.dataset.page === 'music') {
+      requestAnimationFrame(syncImmoTabIndicator);
+    }
   });
 
   window.addEventListener('resize', () => {
     syncNavIndicator();
     syncFilterIndicator();
+    syncImmoTabIndicator();
   });
 
   window.addEventListener('load', () => {
     syncNavIndicator();
     syncFilterIndicator();
+    syncImmoTabIndicator();
   });
 
   syncNavIndicator();
@@ -2595,7 +2781,11 @@
   /* ---------------- 工具库 ---------------- */
   const CLOCK_STYLES = [
     ['glass', '玻璃水滴'], ['flip', '翻页数字'], ['analog', '圆环指针'], ['neon', '霓虹辉光'], ['minimal', '极简细体'],
-    ['arc', '弧形进度'], ['capsule', '渐变胶囊'], ['led', '点阵 LED'], ['poster', '海报'], ['outline', '描边']
+    ['arc', '弧形进度'], ['capsule', '渐变胶囊'], ['led', '点阵 LED'], ['poster', '海报'], ['outline', '描边'],
+    ['signature', '签名手写']
+  ];
+  const DATE_STYLES = [
+    ['script', '签名手写'], ['minimal', '极简细体']
   ];
   const WAVE_STYLES = [
     ['bars', '渐变柱形'], ['line', '霓虹线波'], ['glass', '液态玻璃'], ['radial', '环形辐射'], ['dots', '点阵粒子'],
@@ -2629,6 +2819,7 @@
       case 'gpu': return GPU_STYLES;
       case 'disk': return DISK_STYLES;
       case 'image': return IMAGE_STYLES;
+      case 'date': return DATE_STYLES;
       default: return CLOCK_STYLES;
     }
   }
@@ -2642,7 +2833,7 @@
     const names = {
       clock: '时钟', wave: '音浪', text: '文本',
       cpu: 'CPU', memory: '内存', gpu: 'GPU', disk: '磁盘',
-      image: '图片'
+      image: '图片', date: '日期'
     };
     return names[type] || '组件';
   }
@@ -2822,6 +3013,7 @@
       btn.addEventListener('click', () => {
         editing.style = id;
         buildStyleChips();
+        updateEditorVisibility();
         $('#edSub').textContent = typeName(editing.type) + ' · ' + name;
         renderImageInfo();
         queueUpdate();
@@ -2841,6 +3033,25 @@
     $('#edBarCountVal').textContent = editing.barCount;
     $('#edSensitivityVal').textContent = Math.round((editing.sensitivity || 1.2) * 100) + '%';
     $('#edCarouselVal').textContent = (editing.carouselSeconds || 4) + 's';
+    $('#edTextAlphaVal').textContent = Math.round((editing.textAlpha ?? 1) * 100) + '%';
+    $('#edSignatureAlphaVal').textContent = Math.round((editing.signatureAlpha ?? 0.8) * 100) + '%';
+  }
+
+  function updateEditorVisibility() {
+    if (!editing) return;
+    const type = editing.type;
+    const signature = (type === 'clock' && editing.style === 'signature')
+      || (type === 'date' && editing.style === 'script');
+
+    $('#edClockSec').hidden = type !== 'clock' && type !== 'date';
+    $('#edClockFormatField').hidden = type === 'date';
+    $('#edWeekField').hidden = type === 'date';
+    $('#edWaveSec').hidden = type !== 'wave';
+    $('#edTextSec').hidden = type !== 'text';
+    $('#edImageSec').hidden = type !== 'image';
+    $('#edSignatureColorField').hidden = !signature;
+    $('#edSignatureAlphaRow').hidden = !signature;
+    $('#edSignatureTip').hidden = !signature;
   }
 
   function renderImageInfo() {
@@ -2857,10 +3068,7 @@
 
     $('#edTitle').textContent = '编辑' + typeName(type);
     $('#edSub').textContent = typeName(type) + ' · ' + styleName(type, editing.style);
-    $('#edClockSec').hidden = type !== 'clock';
-    $('#edWaveSec').hidden = type !== 'wave';
-    $('#edTextSec').hidden = type !== 'text';
-    $('#edImageSec').hidden = type !== 'image';
+    updateEditorVisibility();
     $('#edImg').src = editing.preview || '';
 
     $('#edName').value = editing.name || '';
@@ -2880,6 +3088,11 @@
     $('#edDateFormat').value = editing.dateFormat;
     $('#edWeek').checked = !!editing.showWeek;
     $('#edContent').value = editing.content || '';
+
+    $('#edTextAlpha').value = Math.round((editing.textAlpha ?? 1) * 100);
+    $('#edGold').checked = !!editing.goldText;
+    $('#edSignatureColor').value = safeColor(editing.signatureColor, '#ffd700');
+    $('#edSignatureAlpha').value = Math.round((editing.signatureAlpha ?? 0.8) * 100);
 
     renderImageInfo();
     updateEditorLabels();
@@ -2932,6 +3145,7 @@
     bindText('edAccentColor', 'accentColor');
     bindText('edAccent2Color', 'accentColor2');
     bindText('edBgColor', 'bgColor');
+    bindText('edSignatureColor', 'signatureColor');
 
     bindNumber('edBgAlpha', 'bgAlpha', v => (+v) / 100);
     bindNumber('edRadius', 'radius', v => Math.round(+v));
@@ -2939,6 +3153,14 @@
     bindNumber('edBarCount', 'barCount', v => Math.round(+v));
     bindNumber('edSensitivity', 'sensitivity', v => Math.max(0.3, Math.min(3, (+v) / 100)));
     bindNumber('edCarouselSeconds', 'carouselSeconds', v => Math.round(+v));
+    bindNumber('edTextAlpha', 'textAlpha', v => (+v) / 100);
+    bindNumber('edSignatureAlpha', 'signatureAlpha', v => (+v) / 100);
+
+    $('#edGold').addEventListener('change', e => {
+      if (!editing) return;
+      editing.goldText = e.target.checked;
+      queueUpdate();
+    });
 
     $('#edFont').addEventListener('change', e => {
       if (!editing) return;
@@ -3259,7 +3481,9 @@
 
     const duration = p.duration || 0;
     const position = Math.min(p.position || 0, duration || 0);
-    $('#progressFill').style.width = duration > 0 ? (position / duration * 100) + '%' : '0%';
+    const pct = duration > 0 ? (position / duration * 100) : 0;
+    $('#progressFill').style.width = pct + '%';
+    $('#progressThumb').style.left = pct + '%';
     $('#posText').textContent = formatClock(position);
     $('#durText').textContent = formatClock(duration);
 
@@ -3301,7 +3525,8 @@
     $('#iPlay').dataset.playing = p.playing ? '1' : '0';
     $('#bigVinyl').classList.toggle('has-art', !!art);
     $('#musicImmo').classList.toggle('playing', !!p.playing);
-    $('#iFill').style.width = duration > 0 ? (position / duration * 100) + '%' : '0%';
+    $('#iFill').style.width = pct + '%';
+    $('#iThumb').style.left = pct + '%';
     $('#iPos').textContent = formatClock(position);
     $('#iDur').textContent = formatClock(duration);
 
@@ -3335,14 +3560,54 @@
     send({ cmd: 'playerVolume', value: e.target.value / 100 });
   });
 
-  $('#progressBar').addEventListener('click', (e) => {
-    const duration = state.player?.duration || 0;
-    if (!duration) return;
+  // 进度条：拖动小圆点或点击任意位置都能跳转，拖动时按 80ms 节流发送 seek
+  function enableScrub(bar) {
+    if (!bar) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
-    send({ cmd: 'playerSeek', value: ratio * duration });
-  });
+    let dragging = false;
+    let lastSent = 0;
+
+    const seek = (clientX, force) => {
+      const duration = state.player?.duration || 0;
+      if (!duration) return;
+
+      const rect = bar.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+      const fill = bar.querySelector('[id$="Fill"]');
+      const thumb = bar.querySelector('.thumb');
+      if (fill) fill.style.width = ratio * 100 + '%';
+      if (thumb) thumb.style.left = ratio * 100 + '%';
+
+      const now = Date.now();
+      if (force || now - lastSent > 80) {
+        lastSent = now;
+        send({ cmd: 'playerSeek', value: ratio * duration });
+      }
+    };
+
+    bar.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      bar.classList.add('dragging');
+      bar.setPointerCapture(e.pointerId);
+      seek(e.clientX, true);
+    });
+    bar.addEventListener('pointermove', (e) => {
+      if (dragging) seek(e.clientX, false);
+    });
+    bar.addEventListener('pointerup', (e) => {
+      if (!dragging) return;
+      dragging = false;
+      bar.classList.remove('dragging');
+      seek(e.clientX, true);
+    });
+    bar.addEventListener('pointercancel', () => {
+      dragging = false;
+      bar.classList.remove('dragging');
+    });
+  }
+
+  enableScrub($('#progressBar'));
+  enableScrub($('#iProgress'));
 
   $('#newPlaylist').addEventListener('click', () => {
     const name = prompt('播放列表名称', `播放列表 ${(state.music.playlists || []).length + 1}`);
@@ -3362,7 +3627,91 @@
     });
   }
 
-  function renderImmoList() {
+  function artistGroups() {
+    const map = new Map();
+    (state.music.files || []).forEach(file => {
+      const name = file.artist || '其他';
+      if (!map.has(name)) map.set(name, []);
+      map.get(name).push(file);
+    });
+
+    const preferred = ['周杰伦', '许嵩'];
+    return [...map.entries()]
+      .sort((a, b) => {
+        const ia = preferred.indexOf(a[0]);
+        const ib = preferred.indexOf(b[0]);
+        if (ia >= 0 && ib >= 0) return ia - ib;
+        if (ia >= 0) return -1;
+        if (ib >= 0) return 1;
+        return a[0].localeCompare(b[0], 'zh-CN');
+      })
+      .map(([name, songs]) => ({ name, songs }));
+  }
+
+  function finishImmoRender(animate) {
+    if (!animate) return;
+    const host = $('#immoList');
+    host.classList.remove('immo-in');
+    void host.offsetWidth;
+    host.classList.add('immo-in');
+  }
+
+  function renderArtistPanel(host) {
+    const groups = artistGroups();
+
+    if (state.immoArtist) {
+      const group = groups.find(g => g.name === state.immoArtist);
+
+      if (!group) {
+        state.immoArtist = null;
+      } else {
+        const back = el('button', 'immo-back', '← 全部歌手');
+        back.addEventListener('click', () => {
+          state.immoArtist = null;
+          renderImmoList(true);
+        });
+        host.appendChild(back);
+
+        const play = el('button', 'immo-new', '▶ 播放全部 · ' + group.songs.length + ' 首');
+        play.addEventListener('click', () => send({ cmd: 'playArtist', artist: group.name }));
+        host.appendChild(play);
+
+        group.songs.forEach((file, index) => {
+          const row = el('div', 'isong');
+          row.dataset.path = file.path;
+          row.appendChild(el('span', 'no', String(index + 1).padStart(2, '0')));
+          row.appendChild(el('span', 't', file.title));
+          row.appendChild(el('span', 'd', formatDuration(file.duration)));
+          row.addEventListener('click', () => send({ cmd: 'playArtist', artist: group.name, path: file.path }));
+          host.appendChild(row);
+        });
+
+        updateImmoHighlight();
+        return;
+      }
+    }
+
+    if (!groups.length) {
+      host.appendChild(el('div', 'empty', '音乐文件夹还是空的'));
+      return;
+    }
+
+    const grid = el('div', 'artist-grid');
+    groups.forEach(group => {
+      const card = el('div', 'artist-card');
+      card.appendChild(el('span', 'a-mark', '♪'));
+      card.appendChild(el('span', 'a-name', group.name));
+      card.appendChild(el('span', 'a-count', group.songs.length + ' 首'));
+      card.addEventListener('click', () => {
+        state.immoArtist = group.name;
+        renderImmoList(true);
+      });
+      grid.appendChild(card);
+    });
+    host.appendChild(grid);
+  }
+
+  function renderImmoList(animate) {
     const host = $('#immoList');
     if (!host) return;
 
@@ -3386,12 +3735,21 @@
         row.addEventListener('click', () => send({ cmd: 'playPlaylist', id: pl.id }));
         host.appendChild(row);
       });
+
+      finishImmoRender(animate);
+      return;
+    }
+
+    if (state.immoTab === 'artists') {
+      renderArtistPanel(host);
+      finishImmoRender(animate);
       return;
     }
 
     const files = state.music.files || [];
     if (!files.length) {
       host.appendChild(el('div', 'empty', '音乐文件夹还是空的'));
+      finishImmoRender(animate);
       return;
     }
 
@@ -3406,6 +3764,18 @@
     });
 
     updateImmoHighlight();
+    finishImmoRender(animate);
+  }
+
+  function syncImmoTabIndicator() {
+    const box = $('#immoTabs');
+    const ind = $('#immoTabInd');
+    const active = document.querySelector('#immoTabs button.active');
+
+    if (!box || !ind || !active || !active.offsetWidth) return;
+
+    ind.style.width = active.offsetWidth + 'px';
+    ind.style.transform = 'translateX(' + active.offsetLeft + 'px)';
   }
 
   function applyImmersive() {
@@ -3413,6 +3783,7 @@
     $('#musicImmo').hidden = !state.immersive;
     renderImmoList();
     renderPlayer();
+    requestAnimationFrame(syncImmoTabIndicator);
   }
 
   let wipeBusy = false;
@@ -3510,10 +3881,12 @@
     const btn = e.target.closest('[data-immo-tab]');
     if (!btn) return;
 
+    if (state.immoTab !== btn.dataset.immoTab) state.immoArtist = null;
     state.immoTab = btn.dataset.immoTab;
     document.querySelectorAll('#immoTabs button')
       .forEach(b => b.classList.toggle('active', b === btn));
-    renderImmoList();
+    renderImmoList(true);
+    syncImmoTabIndicator();
   });
 
   $('#iPlay').addEventListener('click', () => send({ cmd: 'playerToggle' }));
@@ -3523,15 +3896,6 @@
   $('#iVolume').addEventListener('input', (e) => {
     $('#iVolText').textContent = e.target.value + '%';
     send({ cmd: 'playerVolume', value: e.target.value / 100 });
-  });
-
-  $('#iProgress').addEventListener('click', (e) => {
-    const duration = state.player?.duration || 0;
-    if (!duration) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
-    send({ cmd: 'playerSeek', value: ratio * duration });
   });
 
   /* ---------------- 歌词 ---------------- */

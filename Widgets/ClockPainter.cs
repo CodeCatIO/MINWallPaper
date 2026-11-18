@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Globalization;
 
 namespace MINWallPaper.Widgets;
 
@@ -58,6 +59,9 @@ internal static class ClockPainter
                 break;
             case "outline":
                 PaintOutline(g, w, h, c, time, sub, dateFont);
+                break;
+            case "signature":
+                PaintSignature(g, w, h, c, time, sub);
                 break;
             default:
                 PaintGlass(g, w, h, c, time, sub, dateFont);
@@ -680,5 +684,47 @@ internal static class ClockPainter
                 new RectangleF(0, h - dateH - pad * 0.4f, w, dateH),
                 StringAlignment.Center, StringAlignment.Center);
         }
+    }
+
+    /// <summary>签名手写：背后是放大英文星期，前面是细衬线时间和日期。</summary>
+    private static void PaintSignature(Graphics g, int w, int h, WidgetConfig c, string time, string sub)
+    {
+        if (c.BgAlpha > 0.02)
+        {
+            PaintKit.DrawCard(g, new Rectangle(0, 0, w - 1, h - 1), c.Radius, c.BgFill, 20);
+        }
+
+        int signatureAlpha = (int)Math.Round(Math.Clamp(c.SignatureAlpha, 0, 1) * 255);
+        int textAlpha = (int)Math.Round(Math.Clamp(c.TextAlpha, 0, 1) * 255);
+
+        string weekday = DateTime.Now.ToString("dddd", CultureInfo.InvariantCulture);
+        using Font script = PaintKit.FitFont(g, weekday, PaintKit.ScriptFamily, FontStyle.Italic,
+            h * 0.66f, w * 0.9f);
+
+        GraphicsState state = g.Save();
+        g.RotateTransform(-4f);
+        PaintKit.DrawText(g, weekday, script, PaintKit.Alpha(c.Signature, signatureAlpha),
+            new RectangleF(w * 0.03f, -h * 0.01f, w * 0.94f, h * 0.74f),
+            StringAlignment.Near, StringAlignment.Center);
+        g.Restore(state);
+
+        float timeMax = Math.Min(h * 0.36f, c.FontSize * 1.2f);
+        using Font timeFont = PaintKit.FitFont(g, time, "Bodoni MT", FontStyle.Regular,
+            timeMax, w * 0.78f);
+
+        // 时间走金属镀金渐变，签名单独用上面的颜色/浓度，两者互不影响。
+        PaintKit.DrawGoldText(g, time, timeFont,
+            new RectangleF(0, h * 0.48f, w, timeFont.GetHeight(g)),
+            StringAlignment.Center, StringAlignment.Center, textAlpha);
+
+        if (!string.IsNullOrEmpty(sub))
+        {
+            using Font small = PaintKit.CreateFont(c.FontFamily, Math.Max(9f, c.FontSize * 0.26f));
+            PaintKit.DrawSpacedText(g, sub, small, PaintKit.Alpha(c.Text, 190 * textAlpha / 255),
+                w * 0.62f, h * 0.84f, 1.6f);
+        }
+
+        using var pen = new Pen(PaintKit.Alpha(c.Accent, 140), 1f);
+        g.DrawLine(pen, w * 0.16f, h * 0.78f, w * 0.32f, h * 0.78f);
     }
 }

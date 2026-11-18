@@ -6,7 +6,7 @@
 ; 输出在 dist\MINWallPaper-<版本>-setup.exe
 
 #define AppName "MINWallPaper"
-#define AppVersion "1.1.1"
+#define AppVersion "1.1.2"
 #define AppPublisher "CodeCat"
 #define AppExe "MINWallPaper.exe"
 
@@ -30,7 +30,7 @@ UninstallDisplayIcon={app}\{#AppExe}
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
-VersionInfoVersion=1.1.1.0
+VersionInfoVersion=1.1.2.0
 VersionInfoCompany={#AppPublisher}
 VersionInfoDescription={#AppName} Setup
 
