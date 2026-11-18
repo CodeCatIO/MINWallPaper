@@ -19,8 +19,9 @@
 **视频壁纸**
 - Media Foundation 硬解，铺在桌面图标下方（WorkerW / Progman 双路径兼容）
 - 支持 mp4 / mkv / mov / avi / wmv 等系统能解码的格式
-- 播放卡住时自动重启；桌面层被重建时自动重新挂载
-- 播放视频期间会暂时清空系统静态壁纸（否则会盖住视频层），停止后自动恢复
+- 播放卡住时自动重启；视频窗口丢失时自动重建
+- 视频层压在所有窗口最底部，不受 Windows 桌面快照影响，也不改动系统壁纸
+- **播放视频时桌面图标会被视频画面盖住**（图标本身仍可点击）
 - 图片壁纸交给系统壁纸接口，常驻内存接近零
 
 **壁纸配乐**
@@ -81,13 +82,13 @@ data/
 
 ```
 Music/        音乐库、播放器、播放列表、封面提取、歌词
-Native/       桌面层 WorkerW、窗口样式等原生调用
+Native/       Win32 窗口样式、DWM 等原生调用
 Pages/        WebView2 与前端之间的消息通道
 Playback/     视频壁纸播放与看门狗
 Storage/      壁纸索引、设置、音乐库索引
 Web/          前端界面（单文件 index.html + 资源）
 Widgets/      桌面小组件（时钟、音浪、落雨）
-WallpaperHost.cs   壁纸宿主与桌面层挂载
+WallpaperHost.cs   壁纸宿主与视频层管理
 WebLibraryForm.cs  主面板窗口
 TrayContext.cs     托盘与启动逻辑
 ```

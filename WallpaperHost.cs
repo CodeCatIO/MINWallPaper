@@ -39,24 +39,18 @@ internal sealed class WallpaperHost
         _healthTimer = new System.Windows.Forms.Timer { Interval = 5000 };
         _healthTimer.Tick += (_, _) =>
         {
-            EnsureVideoWallpaperCleared();
             CheckLayerHealth();
             CheckVideoHealth();
         };
         _healthTimer.Start();
     }
 
-    /// <summary>播放视频时静态壁纸必须保持为空，否则会重新盖住视频层。</summary>
-    private void EnsureVideoWallpaperCleared()
-    {
-        if (CurrentKind == WallpaperKind.Video && SystemWallpaper.IsDesktopWallpaperSet())
-        {
-            SystemWallpaper.ClearForVideo();
-            Log.Write("检测到系统壁纸重新出现，再次清除");
-        }
-    }
-
-    /// <summary>排查桌面层是否还挂在当前 WorkerW 上。</summary>
+    /// <summary>
+    /// 视频层是一个压在所有窗口最底部的顶层窗口。
+    /// 不走 WorkerW：Win11 的桌面层会缓存一张图标层快照，切换桌面/拔插显示器后
+    /// 快照会盖住 WorkerW 里的所有子窗口，表现为视频在播但桌面是黑的。
+    /// 最底层顶层窗口位于壁纸之上、普通窗口之下，不受这个快照影响。
+    /// </summary>
     private void CheckLayerHealth()
     {
         if (_recovering || CurrentKind != WallpaperKind.Video || _hwnd == IntPtr.Zero)
@@ -64,24 +58,29 @@ internal sealed class WallpaperHost
             return;
         }
 
-        IntPtr host = DesktopHost.FindHost();
+        if (!NativeMethods.IsWindow(_hwnd) || !_window!.Visible)
+        {
+            Log.Write("壁纸窗口已丢失，重新创建视频层");
+            RecoverLayer();
+            return;
+        }
 
-        if (host == IntPtr.Zero)
+        KeepAtBottom();
+    }
+
+    /// <summary>把视频层压回所有顶层窗口的最底部，避免被其他窗口顶上来。</summary>
+    private void KeepAtBottom()
+    {
+        if (_hwnd == IntPtr.Zero)
         {
             return;
         }
 
-        bool handleOk = NativeMethods.IsWindow(_hwnd);
-        IntPtr parent = handleOk ? NativeMethods.GetParent(_hwnd) : IntPtr.Zero;
-        bool visible = handleOk && NativeMethods.IsWindowVisible(_hwnd);
+        int cx = NativeMethods.GetSystemMetrics(NativeMethods.SM_CXSCREEN);
+        int cy = NativeMethods.GetSystemMetrics(NativeMethods.SM_CYSCREEN);
 
-        if (handleOk && parent == host && visible)
-        {
-            return;
-        }
-
-        Log.Write($"壁纸层异常（handle={handleOk} parent=0x{parent:X} host=0x{host:X} visible={visible}），重新挂载");
-        RecoverLayer();
+        NativeMethods.SetWindowPos(_hwnd, NativeMethods.HWND_BOTTOM, 0, 0, cx, cy,
+            NativeMethods.SWP_NOACTIVATE);
     }
 
     /// <summary>宿主被重建或窗口丢失时，把视频层重新挂回桌面并重启渲染。</summary>
@@ -234,15 +233,8 @@ internal sealed class WallpaperHost
 
     public void Stop()
     {
-        bool wasVideo = CurrentKind == WallpaperKind.Video;
-
         _renderer.Dispose();
         CloseLayer();
-
-        if (wasVideo)
-        {
-            SystemWallpaper.RestoreAfterVideo();
-        }
 
         IsPlaying = false;
         CurrentPath = null;
@@ -291,9 +283,6 @@ internal sealed class WallpaperHost
         _renderer.Dispose();
         CloseLayer();
 
-        // 静态壁纸会盖在视频层上面，播放视频前必须把系统壁纸清掉。
-        SystemWallpaper.ClearForVideo();
-
         EnsureLayer();
         ApplyVideoPoster(path);
         _renderer.Attach(_hwnd);
@@ -321,7 +310,7 @@ internal sealed class WallpaperHost
         Log.Write("壁纸切换为系统图片: " + path);
     }
 
-    /// <summary>创建壁纸窗口并挂到桌面图标下方，只做一次。</summary>
+    /// <summary>创建铺满屏幕的视频层窗口，只做一次。</summary>
     private void EnsureLayer()
     {
         if (_window != null)
@@ -336,40 +325,39 @@ internal sealed class WallpaperHost
         {
             FormBorderStyle = FormBorderStyle.None,
             StartPosition = FormStartPosition.Manual,
-            Bounds = new Rectangle(-32000, -32000, cx, cy),
+            Bounds = new Rectangle(0, 0, cx, cy),
             ShowInTaskbar = false,
             BackColor = Color.Black
         };
 
-        // 先 Show 一次拿到窗口句柄，再挂到桌面壁纸层。
         window.Show();
         IntPtr hwnd = window.Handle;
 
-        IntPtr host = DesktopHost.Attach(hwnd);
-        Log.Write($"壁纸窗口 0x{hwnd:X} 已挂到宿主 0x{host:X}");
-
         PrepareLayerWindow(hwnd);
+        KeepAtBottom();
+        Log.Write($"视频层窗口 0x{hwnd:X} 已创建，置于所有窗口最底层");
 
         _window = window;
         _hwnd = hwnd;
     }
 
-    /// <summary>把窗口改成桌面子窗口并铺满屏幕。</summary>
+    /// <summary>把窗口改成不抢焦点、鼠标穿透的桌面底层窗口，并铺满屏幕。</summary>
     private static void PrepareLayerWindow(IntPtr hwnd)
     {
         int cx = NativeMethods.GetSystemMetrics(NativeMethods.SM_CXSCREEN);
         int cy = NativeMethods.GetSystemMetrics(NativeMethods.SM_CYSCREEN);
 
         int style = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_STYLE);
-        style = (style | NativeMethods.WS_CHILD | NativeMethods.WS_VISIBLE) & ~NativeMethods.WS_POPUP;
+        style = (style | NativeMethods.WS_POPUP | NativeMethods.WS_VISIBLE) & ~NativeMethods.WS_CHILD;
         NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_STYLE, style);
 
         int exStyle = NativeMethods.GetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE);
         NativeMethods.SetWindowLong(hwnd, NativeMethods.GWL_EXSTYLE,
-            exStyle | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE);
+            exStyle | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE |
+            NativeMethods.WS_EX_TRANSPARENT);
 
-        NativeMethods.SetWindowPos(hwnd, IntPtr.Zero, 0, 0, cx, cy,
-            NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE | NativeMethods.SWP_FRAMECHANGED);
+        NativeMethods.SetWindowPos(hwnd, NativeMethods.HWND_BOTTOM, 0, 0, cx, cy,
+            NativeMethods.SWP_NOACTIVATE | NativeMethods.SWP_FRAMECHANGED);
         NativeMethods.ShowWindow(hwnd, NativeMethods.SW_SHOW);
     }
 
@@ -422,7 +410,6 @@ internal sealed class WallpaperHost
         _poster?.Dispose();
         _poster = null;
 
-        NativeMethods.SetParent(_hwnd, IntPtr.Zero);
         _window.Close();
         _window.Dispose();
         _window = null;

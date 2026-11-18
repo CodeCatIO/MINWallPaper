@@ -21,6 +21,9 @@ internal static class NativeMethods
     public const int WS_EX_TOOLWINDOW = 0x00000080;
     public const int WS_EX_NOACTIVATE = 0x08000000;
 
+    /// <summary>鼠标事件穿透到下层窗口，桌面右键仍然可用。</summary>
+    public const int WS_EX_TRANSPARENT = 0x00000020;
+
     /// <summary>去掉窗口的 GDI 重定向表面，DirectComposition 内容才能显示。</summary>
     public const int WS_EX_NOREDIRECTIONBITMAP = 0x00200000;
 
@@ -39,6 +42,8 @@ internal static class NativeMethods
 
     public static readonly IntPtr HWND_BOTTOM = new(1);
 
+    public const int SW_HIDE = 0;
+    public const int SW_SHOWNORMAL = 1;
     public const int SW_SHOW = 5;
 
     public const int SM_CXSCREEN = 0;

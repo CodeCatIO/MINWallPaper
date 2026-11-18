@@ -15,20 +15,11 @@ namespace MINWallPaper;
 internal static class SystemWallpaper
 {
     private const int SPI_SETDESKWALLPAPER = 0x0014;
-    private const int SPI_GETDESKWALLPAPER = 0x0073;
     private const int SPIF_UPDATEINIFILE = 0x01;
     private const int SPIF_SENDCHANGE = 0x02;
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern int SystemParametersInfo(int action, int param, string value, int winIni);
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern int SystemParametersInfo(int action, int param, System.Text.StringBuilder value,
-        int winIni);
-
-    // 视频播放前会把桌面壁纸清空，退出视频时再恢复，避免静态壁纸盖住视频层。
-    private static string? _savedWallpaper;
-    private static bool _clearedForVideo;
 
     // 视频首帧兜底在后台线程里调用，和界面上的图片壁纸可能同时设置，串行化避免抢同一个文件。
     private static readonly object Gate = new();
@@ -43,8 +34,6 @@ internal static class SystemWallpaper
 
         lock (Gate)
         {
-            // 明确设置了图片壁纸，它成为之后视频停止时的恢复点。
-            _clearedForVideo = false;
             return ApplyCore(imagePath, mode, verticalOffset);
         }
     }
@@ -69,11 +58,6 @@ internal static class SystemWallpaper
             int ok = SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, target,
                 SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
 
-            if (ok != 0 && !_clearedForVideo)
-            {
-                _savedWallpaper = target;
-            }
-
             Log.Write($"系统壁纸已设置 mode={mode} offset={verticalOffset:F2} 结果={ok}");
             return ok != 0;
         }
@@ -82,67 +66,6 @@ internal static class SystemWallpaper
             Log.Write("设置系统壁纸失败: " + ex.Message);
             return false;
         }
-    }
-
-    /// <summary>
-    /// 播放视频前清空 Windows 静态壁纸。
-    /// Win11 的静态壁纸会盖在 WorkerW 视频层上面，不清掉就只剩黑屏/旧壁纸。
-    /// </summary>
-    public static void ClearForVideo()
-    {
-        lock (Gate)
-        {
-            if (!_clearedForVideo)
-            {
-                string current = CurrentDesktopWallpaper();
-
-                if (!string.IsNullOrEmpty(current) && File.Exists(current))
-                {
-                    _savedWallpaper = current;
-                }
-
-                _clearedForVideo = true;
-            }
-
-            SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, "",
-                SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
-
-            Log.Write("已清除系统壁纸，避免盖住视频层");
-        }
-    }
-
-    /// <summary>停止视频壁纸时把之前的系统壁纸还回去。</summary>
-    public static void RestoreAfterVideo()
-    {
-        lock (Gate)
-        {
-            if (!_clearedForVideo)
-            {
-                return;
-            }
-
-            _clearedForVideo = false;
-
-            if (!string.IsNullOrEmpty(_savedWallpaper) && File.Exists(_savedWallpaper))
-            {
-                ApplyCore(_savedWallpaper, ImageFillMode.Fill, 0.5);
-                Log.Write("已恢复视频前的系统壁纸: " + _savedWallpaper);
-            }
-        }
-    }
-
-    /// <summary>系统壁纸是不是又被 Windows / 其他程序设回去了。</summary>
-    public static bool IsDesktopWallpaperSet()
-    {
-        string current = CurrentDesktopWallpaper();
-        return !string.IsNullOrEmpty(current);
-    }
-
-    private static string CurrentDesktopWallpaper()
-    {
-        var buffer = new System.Text.StringBuilder(1024);
-        int ok = SystemParametersInfo(SPI_GETDESKWALLPAPER, buffer.Capacity, buffer, 0);
-        return ok != 0 ? buffer.ToString() : "";
     }
 
     private static string ComposeScreenImage(string imagePath, ImageFillMode mode, double offset)
