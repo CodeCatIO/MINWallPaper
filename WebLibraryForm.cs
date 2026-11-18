@@ -63,12 +63,27 @@ internal sealed class WebLibraryForm : Form
         MusicArtwork.Ready += OnPlayerChanged;
         WidgetService.Instance.Changed += OnWidgetsChanged;
 
-        _playerTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+        // 歌词高亮和进度条按 250ms 跟随播放；暂停时降到 1s，避免无意义刷新。
+        _playerTimer = new System.Windows.Forms.Timer { Interval = 250 };
         _playerTimer.Tick += (_, _) =>
         {
-            if (_ready && !_disposed && MusicPlayer.Instance.CurrentPath != null)
+            if (!_ready || _disposed || MusicPlayer.Instance.CurrentPath == null)
             {
-                Post(new { type = "player", player = BuildPlayer() });
+                if (_playerTimer.Interval != 1000)
+                {
+                    _playerTimer.Interval = 1000;
+                }
+
+                return;
+            }
+
+            Post(new { type = "player", player = BuildPlayer() });
+
+            int interval = MusicPlayer.Instance.IsPlaying ? 250 : 1000;
+
+            if (_playerTimer.Interval != interval)
+            {
+                _playerTimer.Interval = interval;
             }
         };
         _playerTimer.Start();

@@ -1584,7 +1584,9 @@
     line-height: 1.5;
     transition: color .2s, transform .2s;
     white-space: pre-wrap;
+    cursor: pointer;
   }
+  .lyric-line:hover { color: #4f5a66; }
   .lyric-line.active { color: #1c5fd0; font-weight: 700; transform: translateX(4px); }
   .lyric-empty { color: #7d868f; font-size: 12.5px; margin: 0; line-height: 1.7; }
 
@@ -3564,7 +3566,12 @@
       return;
     }
 
-    state.lyrics.forEach(line => box.appendChild(el('div', 'lyric-line', line.text)));
+    state.lyrics.forEach(line => {
+      const row = el('div', 'lyric-line', line.text);
+      row.title = '点击跳转到这一句';
+      row.addEventListener('click', () => send({ cmd: 'playerSeek', value: line.t }));
+      box.appendChild(row);
+    });
     state.lyricActive = -1;
   }
 
@@ -3604,7 +3611,7 @@
 
     let index = -1;
     for (let i = 0; i < state.lyrics.length; i++) {
-      if (state.lyrics[i].t <= position + 0.2) index = i;
+      if (state.lyrics[i].t <= position + 0.05) index = i;
       else break;
     }
 
@@ -3615,7 +3622,11 @@
     rows.forEach((row, i) => row.classList.toggle('active', i === index));
 
     if (index >= 0 && rows[index]) {
-      rows[index].scrollIntoView({ block: 'center', behavior: 'smooth' });
+      const box = $('#lyricsBox');
+      const rowRect = rows[index].getBoundingClientRect();
+      const boxRect = box.getBoundingClientRect();
+      const target = box.scrollTop + (rowRect.top - boxRect.top) - box.clientHeight / 2 + rowRect.height / 2;
+      box.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
     }
   }
 
