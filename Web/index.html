@@ -1647,6 +1647,112 @@
   }
   .immo-back:hover { background: rgba(255, 255, 255, .82); color: #232930; }
 
+  /* 沉浸模式顶部搜索：只过滤左侧列表 */
+  .immo-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    align-self: center;
+    width: min(380px, 44vw);
+    padding: 9px 15px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .07);
+    border: 1px solid rgba(255, 255, 255, .14);
+    color: #aeb2b8;
+    transition: background .2s, border-color .2s;
+  }
+  .immo-search-wrap:focus-within {
+    background: rgba(255, 255, 255, .13);
+    border-color: rgba(255, 255, 255, .3);
+  }
+  .immo-search-wrap svg { width: 15px; height: 15px; flex: 0 0 auto; opacity: .7; }
+  .immo-search-wrap input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #f2f2f3;
+    font-size: 13px;
+  }
+  .immo-search-wrap input::placeholder { color: #7b8087; }
+
+  /* 右键玻璃菜单 */
+  .immo-menu {
+    position: fixed;
+    z-index: 12000;
+    min-width: 150px;
+    padding: 6px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, .78);
+    background: linear-gradient(145deg, rgba(255, 255, 255, .82), rgba(244, 242, 236, .62));
+    box-shadow:
+      0 18px 44px rgba(20, 30, 40, .22),
+      inset 0 1px 0 rgba(255, 255, 255, .9);
+    backdrop-filter: blur(18px) saturate(1.25);
+    -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    transform-origin: top left;
+    color: #232930;
+  }
+  .immo-menu.show { animation: menuPop .36s cubic-bezier(.22, 1.35, .36, 1); }
+  @keyframes menuPop {
+    0% { opacity: 0; transform: scale(.7) translateY(8px); }
+    58% { opacity: 1; transform: scale(1.05) translateY(-2px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .immo-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 9px 11px;
+    border-radius: 10px;
+    color: #232930;
+    font-size: 13px;
+    text-align: left;
+    transition: background .15s;
+  }
+  .immo-menu-item:hover { background: rgba(35, 41, 48, .09); }
+  .immo-menu-item svg { width: 15px; height: 15px; opacity: .7; flex: 0 0 auto; }
+  .immo-cats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 6px 2px 2px;
+    margin-top: 4px;
+    border-top: 1px solid rgba(35, 41, 48, .12);
+    max-height: 190px;
+    overflow-y: auto;
+  }
+  .immo-cats button {
+    padding: 7px 8px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, .45);
+    border: 1px solid rgba(255, 255, 255, .65);
+    font-size: 12px;
+    color: #2b333a;
+    text-align: center;
+    transition: background .15s, transform .15s;
+  }
+  .immo-cats button:hover { background: #fff; transform: translateY(-1px); }
+  .immo-cats .immo-cat-add {
+    border: 1px dashed rgba(35, 41, 48, .3);
+    background: rgba(255, 255, 255, .24);
+    color: #1c5fd0;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    min-height: 32px;
+  }
+  .immo-cats .immo-cat-add:hover {
+    background: #fff;
+    border-color: rgba(28, 95, 208, .45);
+  }
+  .isong .pin { width: 14px; flex: 0 0 auto; display: grid; place-items: center; color: #1c5fd0; opacity: .9; }
+  .isong .pin svg { width: 12px; height: 12px; }
+
   .immo-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .immo-list::-webkit-scrollbar { width: 0; }
   .immo-new {
@@ -1974,6 +2080,14 @@
           </div>
           <p id="musicCount">正在扫描音乐文件夹…</p>
         </div>
+        <div class="immo-search-wrap" id="immoSearchWrap" hidden>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="2"></circle>
+            <path d="m15.5 15.5 4.2 4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+          </svg>
+          <input id="immoSearch" placeholder="搜索歌曲 / 播放列表 / 歌手" autocomplete="off">
+        </div>
+        <div class="spacer"></div>
       </div>
 
       <div class="music" id="musicNormal">
@@ -2327,6 +2441,33 @@
   </footer>
 </aside>
 
+<div class="immo-menu" id="immoMenu" hidden>
+  <button class="immo-menu-item" data-menu-act="pin">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M9 3.8h6l-1 6.1 3.1 3.1H6.9l3.1-3.1-1-6.1Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+      <path d="M12 13v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+    </svg>
+    <span>置顶</span>
+  </button>
+  <button class="immo-menu-item" data-menu-act="cat">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3.5 7.5h6l1.6 2h9.4v8a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 17.5v-10Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+    </svg>
+    <span>分类</span>
+  </button>
+  <div class="immo-cats" id="immoCats" hidden></div>
+</div>
+
+<div class="immo-menu" id="artistMenu" hidden>
+  <button class="immo-menu-item" data-artist-act="rename">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="m4 20 4.2-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+      <path d="m13.5 7.5 3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+    </svg>
+    <span>修改名字</span>
+  </button>
+</div>
+
 <div class="rz t" data-edge="top"></div>
 <div class="rz b" data-edge="bottom"></div>
 <div class="rz l" data-edge="left"></div>
@@ -2354,6 +2495,7 @@
     immersive: false,
     immoTab: 'all',
     immoArtist: null,
+    immoSearch: '',
     lyrics: [],
     lyricsFor: '',
     lyricActive: -1,
@@ -3635,6 +3777,11 @@
       map.get(name).push(file);
     });
 
+    // 空分类也要显示出来，方便新建后马上看到
+    (state.music.categories || []).forEach(name => {
+      if (!map.has(name)) map.set(name, []);
+    });
+
     const preferred = ['周杰伦', '许嵩'];
     return [...map.entries()]
       .sort((a, b) => {
@@ -3657,7 +3804,12 @@
   }
 
   function renderArtistPanel(host) {
-    const groups = artistGroups();
+    let groups = artistGroups();
+    const query = state.immoSearch;
+
+    if (query) {
+      groups = groups.filter(g => g.name.toLowerCase().includes(query));
+    }
 
     if (state.immoArtist) {
       const group = groups.find(g => g.name === state.immoArtist);
@@ -3676,6 +3828,10 @@
         play.addEventListener('click', () => send({ cmd: 'playArtist', artist: group.name }));
         host.appendChild(play);
 
+        if (!group.songs.length) {
+          host.appendChild(el('div', 'empty', '这个分类还没有歌曲'));
+        }
+
         group.songs.forEach((file, index) => {
           const row = el('div', 'isong');
           row.dataset.path = file.path;
@@ -3692,13 +3848,14 @@
     }
 
     if (!groups.length) {
-      host.appendChild(el('div', 'empty', '音乐文件夹还是空的'));
+      host.appendChild(el('div', 'empty', query ? '没有找到匹配的歌手' : '音乐文件夹还是空的'));
       return;
     }
 
     const grid = el('div', 'artist-grid');
     groups.forEach(group => {
       const card = el('div', 'artist-card');
+      card.dataset.artist = group.name;
       card.appendChild(el('span', 'a-mark', '♪'));
       card.appendChild(el('span', 'a-name', group.name));
       card.appendChild(el('span', 'a-count', group.songs.length + ' 首'));
@@ -3722,9 +3879,14 @@
       add.addEventListener('click', createPlaylist);
       host.appendChild(add);
 
-      const playlists = state.music.playlists || [];
+      const query = state.immoSearch;
+      let playlists = state.music.playlists || [];
+      if (query) {
+        playlists = playlists.filter(pl => pl.name.toLowerCase().includes(query));
+      }
+
       if (!playlists.length) {
-        host.appendChild(el('div', 'empty', '还没有播放列表'));
+        host.appendChild(el('div', 'empty', query ? '没有找到匹配的播放列表' : '还没有播放列表'));
       }
 
       playlists.forEach(pl => {
@@ -3746,17 +3908,46 @@
       return;
     }
 
-    const files = state.music.files || [];
-    if (!files.length) {
+    const allFiles = state.music.files || [];
+    if (!allFiles.length) {
       host.appendChild(el('div', 'empty', '音乐文件夹还是空的'));
       finishImmoRender(animate);
       return;
     }
 
-    files.forEach((file, index) => {
-      const row = el('div', 'isong');
+    const indexByPath = new Map(allFiles.map((file, index) => [file.path, index]));
+    const query = state.immoSearch;
+    let files = allFiles;
+
+    if (query) {
+      files = allFiles.filter(file =>
+        (file.title || '').toLowerCase().includes(query) ||
+        (file.artist || '').toLowerCase().includes(query));
+    }
+
+    // 置顶的排在最前面，其余保持原有顺序
+    files = files.slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
+    if (!files.length) {
+      host.appendChild(el('div', 'empty', '没有找到匹配的歌曲'));
+      finishImmoRender(animate);
+      return;
+    }
+
+    files.forEach(file => {
+      const index = indexByPath.get(file.path);
+      const row = el('div', 'isong' + (file.pinned ? ' pinned' : ''));
       row.dataset.path = file.path;
-      row.appendChild(el('span', 'no', String(index + 1).padStart(2, '0')));
+
+      if (file.pinned) {
+        const pin = el('span', 'pin');
+        pin.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+          '<path d="M9 3.8h6l-1 6.1 3.1 3.1H6.9l3.1-3.1-1-6.1Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>' +
+          '<path d="M12 13v7" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>';
+        row.appendChild(pin);
+      }
+
+      row.appendChild(el('span', 'no', String((index ?? 0) + 1).padStart(2, '0')));
       row.appendChild(el('span', 't', file.title));
       row.appendChild(el('span', 'd', formatDuration(file.duration)));
       row.addEventListener('click', () => send({ cmd: 'playLocal', index }));
@@ -3781,10 +3972,216 @@
   function applyImmersive() {
     $('#musicNormal').hidden = state.immersive;
     $('#musicImmo').hidden = !state.immersive;
+    $('#immoSearchWrap').hidden = !state.immersive;
+
+    if (!state.immersive) {
+      state.immoSearch = '';
+      $('#immoSearch').value = '';
+      closeImmoMenu();
+      closeArtistMenu();
+    }
+
     renderImmoList();
     renderPlayer();
     requestAnimationFrame(syncImmoTabIndicator);
   }
+
+  /* ---------------- 沉浸模式右键菜单 ---------------- */
+  let immoMenuPath = null;
+  let immoMenuX = 0;
+  let immoMenuY = 0;
+
+  function positionImmoMenu() {
+    const menu = $('#immoMenu');
+    if (!menu || menu.hidden) return;
+
+    const rect = menu.getBoundingClientRect();
+    const left = Math.max(8, Math.min(immoMenuX, window.innerWidth - rect.width - 10));
+    const top = Math.max(8, Math.min(immoMenuY, window.innerHeight - rect.height - 10));
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+  }
+
+  function buildImmoCats() {
+    const host = $('#immoCats');
+    host.innerHTML = '';
+
+    const cats = state.music.categories || [];
+    cats.forEach(cat => {
+      const btn = el('button', '', cat);
+      btn.addEventListener('click', () => {
+        const path = immoMenuPath;
+        closeImmoMenu();
+        if (path) send({ cmd: 'moveTrackCategory', path, category: cat });
+      });
+      host.appendChild(btn);
+    });
+
+    const add = el('button', 'immo-cat-add', '+');
+    add.title = '新建分类';
+    add.addEventListener('click', () => {
+      const name = prompt('新建分类名称');
+      if (name && name.trim()) {
+        send({ cmd: 'createCategory', name: name.trim() });
+      }
+      closeImmoMenu();
+    });
+    host.appendChild(add);
+  }
+
+  function openImmoMenu(x, y, path) {
+    closeArtistMenu();
+    immoMenuPath = path;
+    immoMenuX = x;
+    immoMenuY = y;
+
+    const menu = $('#immoMenu');
+    $('#immoCats').hidden = true;
+    menu.hidden = false;
+    menu.classList.remove('show');
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+
+    positionImmoMenu();
+    requestAnimationFrame(() => {
+      positionImmoMenu();
+      menu.classList.add('show');
+    });
+  }
+
+  function closeImmoMenu() {
+    const menu = $('#immoMenu');
+    if (!menu || menu.hidden) return;
+
+    menu.classList.remove('show');
+    menu.hidden = true;
+    $('#immoCats').hidden = true;
+    immoMenuPath = null;
+  }
+
+  let artistMenuName = null;
+  let artistMenuX = 0;
+  let artistMenuY = 0;
+
+  function positionArtistMenu() {
+    const menu = $('#artistMenu');
+    if (!menu || menu.hidden) return;
+
+    const rect = menu.getBoundingClientRect();
+    const left = Math.max(8, Math.min(artistMenuX, window.innerWidth - rect.width - 10));
+    const top = Math.max(8, Math.min(artistMenuY, window.innerHeight - rect.height - 10));
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+  }
+
+  function openArtistMenu(x, y, name) {
+    closeImmoMenu();
+    artistMenuName = name;
+    artistMenuX = x;
+    artistMenuY = y;
+
+    const menu = $('#artistMenu');
+    menu.hidden = false;
+    menu.classList.remove('show');
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+
+    positionArtistMenu();
+    requestAnimationFrame(() => {
+      positionArtistMenu();
+      menu.classList.add('show');
+    });
+  }
+
+  function closeArtistMenu() {
+    const menu = $('#artistMenu');
+    if (!menu || menu.hidden) return;
+
+    menu.classList.remove('show');
+    menu.hidden = true;
+    artistMenuName = null;
+  }
+
+  $('#immoMenu').addEventListener('click', (e) => {
+    const item = e.target.closest('[data-menu-act]');
+    if (!item) return;
+
+    if (item.dataset.menuAct === 'pin') {
+      const path = immoMenuPath;
+      closeImmoMenu();
+      if (path) send({ cmd: 'pinTrack', path });
+      return;
+    }
+
+    buildImmoCats();
+    const cats = $('#immoCats');
+    cats.hidden = !cats.hidden;
+    requestAnimationFrame(positionImmoMenu);
+  });
+
+  $('#artistMenu').addEventListener('click', (e) => {
+    const item = e.target.closest('[data-artist-act]');
+    if (!item) return;
+
+    if (item.dataset.artistAct === 'rename') {
+      const oldName = artistMenuName;
+      closeArtistMenu();
+      if (!oldName) return;
+
+      const next = prompt('修改歌手名字', oldName);
+      if (next && next.trim() && next.trim() !== oldName) {
+        send({ cmd: 'renameCategory', oldName, newName: next.trim() });
+      }
+    }
+  });
+
+  $('#immoList').addEventListener('contextmenu', (e) => {
+    if (!state.immersive) return;
+
+    if (state.immoTab === 'artists') {
+      const card = e.target.closest('.artist-card');
+      if (!card || !card.dataset.artist) return;
+
+      e.preventDefault();
+      openArtistMenu(e.clientX, e.clientY, card.dataset.artist);
+      return;
+    }
+
+    if (state.immoTab !== 'all') return;
+
+    const row = e.target.closest('.isong');
+    if (!row || !row.dataset.path) return;
+
+    e.preventDefault();
+    openImmoMenu(e.clientX, e.clientY, row.dataset.path);
+  });
+
+  document.addEventListener('pointerdown', (e) => {
+    if (!$('#immoMenu').hidden && !e.target.closest('#immoMenu')) {
+      closeImmoMenu();
+    }
+
+    if (!$('#artistMenu').hidden && !e.target.closest('#artistMenu')) {
+      closeArtistMenu();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeImmoMenu();
+      closeArtistMenu();
+    }
+  });
+
+  $('#immoList').addEventListener('scroll', () => {
+    closeImmoMenu();
+    closeArtistMenu();
+  }, { passive: true });
+
+  window.addEventListener('resize', () => {
+    closeImmoMenu();
+    closeArtistMenu();
+  });
 
   let wipeBusy = false;
 
@@ -3887,6 +4284,16 @@
       .forEach(b => b.classList.toggle('active', b === btn));
     renderImmoList(true);
     syncImmoTabIndicator();
+  });
+
+  $('#immoSearch').addEventListener('input', (e) => {
+    state.immoSearch = e.target.value.trim().toLowerCase();
+
+    if (state.immoTab === 'artists') {
+      state.immoArtist = null;
+    }
+
+    renderImmoList(true);
   });
 
   $('#iPlay').addEventListener('click', () => send({ cmd: 'playerToggle' }));
@@ -4092,6 +4499,8 @@
       state.maximized = !!data.maximized;
       applyWindowState();
     } else if (data.type === 'status') {
+      toast(data.text);
+    } else if (data.type === 'toast') {
       toast(data.text);
     } else if (data.type === 'musicHint') {
       $('#musicHint').textContent = data.text;

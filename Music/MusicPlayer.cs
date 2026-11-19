@@ -275,6 +275,57 @@ internal sealed class MusicPlayer
         StateChanged?.Invoke();
     }
 
+    /// <summary>歌曲被移到别的分类后，同步当前队列里的路径。</summary>
+    public void ReplacePath(string oldPath, string newPath)
+    {
+        if (string.IsNullOrWhiteSpace(oldPath) || string.IsNullOrWhiteSpace(newPath))
+        {
+            return;
+        }
+
+        bool changed = false;
+        for (int i = 0; i < _queue.Count; i++)
+        {
+            if (string.Equals(_queue[i], oldPath, StringComparison.OrdinalIgnoreCase))
+            {
+                _queue[i] = newPath;
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            StateChanged?.Invoke();
+        }
+    }
+
+    /// <summary>分类文件夹改名后，同步当前队列里的路径。</summary>
+    public void ReplacePrefix(string oldPrefix, string newPrefix)
+    {
+        if (string.IsNullOrWhiteSpace(oldPrefix) || string.IsNullOrWhiteSpace(newPrefix))
+        {
+            return;
+        }
+
+        string oldRoot = oldPrefix.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        string newRoot = newPrefix.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        bool changed = false;
+
+        for (int i = 0; i < _queue.Count; i++)
+        {
+            if (_queue[i].StartsWith(oldRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                _queue[i] = newRoot + _queue[i].Substring(oldRoot.Length);
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            StateChanged?.Invoke();
+        }
+    }
+
     private void StartCurrent()
     {
         StopInternal();

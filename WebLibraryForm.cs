@@ -300,10 +300,12 @@ internal sealed class WebLibraryForm : Form
                     path = file.Path,
                     title = file.Title,
                     artist = ArtistOf(file.Path),
+                    pinned = MusicPins.Contains(file.Path),
                     sizeBytes = file.SizeBytes,
                     duration = file.Duration.TotalSeconds,
                     url = ToUrl(file.Path)
                 }).ToList(),
+                categories = MusicLibrary.Instance.Categories,
                 playlists = MusicLibrary.Instance.Playlists.Select(playlist => new
                 {
                     id = playlist.Id,
@@ -669,6 +671,87 @@ internal sealed class WebLibraryForm : Form
                     PlayArtist(GetString(root, "artist"), GetString(root, "path"));
                     break;
 
+                case "pinTrack":
+                {
+                    string path = GetString(root, "path");
+                    bool pinned = MusicPins.Toggle(path);
+                    Post(new { type = "toast", text = pinned ? "已置顶" : "已取消置顶" });
+                    PushState();
+                    break;
+                }
+
+                case "moveTrackCategory":
+                {
+                    string path = GetString(root, "path");
+                    string category = GetString(root, "category");
+
+                    if (string.Equals(MusicPlayer.Instance.CurrentPath, path,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        Post(new { type = "toast", text = "正在播放这首歌，切换后再分类" });
+                        break;
+                    }
+
+                    string? moved = MusicLibrary.Instance.MoveToCategory(path, category);
+                    if (moved == null)
+                    {
+                        Post(new { type = "toast", text = "分类失败，请稍后再试" });
+                        break;
+                    }
+
+                    MusicPins.ReplacePath(path, moved);
+                    MusicPlayer.Instance.ReplacePath(path, moved);
+                    Post(new { type = "toast", text = "已移到「" + category + "」" });
+                    PushState();
+                    break;
+                }
+
+                case "createCategory":
+                {
+                    string categoryName = GetString(root, "name");
+                    if (MusicLibrary.Instance.CreateCategory(categoryName))
+                    {
+                        Post(new { type = "toast", text = "已新建分类「" + categoryName + "」" });
+                        PushState();
+                    }
+                    else
+                    {
+                        Post(new { type = "toast", text = "分类名重复或包含非法字符" });
+                    }
+
+                    break;
+                }
+
+                case "renameCategory":
+                {
+                    string oldName = GetString(root, "oldName");
+                    string newName = GetString(root, "newName");
+                    string oldDir = Path.Combine(MusicLibrary.Instance.FilesDir, oldName);
+                    string separator = Path.DirectorySeparatorChar.ToString();
+
+                    if (MusicPlayer.Instance.CurrentPath is string current &&
+                        current.StartsWith(oldDir + separator, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Post(new { type = "toast", text = "正在播放这个分类的歌，先切换再改名" });
+                        break;
+                    }
+
+                    if (MusicLibrary.Instance.RenameCategory(oldName, newName))
+                    {
+                        string newDir = Path.Combine(MusicLibrary.Instance.FilesDir, newName);
+                        MusicPins.ReplacePrefix(oldDir, newDir);
+                        MusicPlayer.Instance.ReplacePrefix(oldDir, newDir);
+                        Post(new { type = "toast", text = "已改名为「" + newName + "」" });
+                        PushState();
+                    }
+                    else
+                    {
+                        Post(new { type = "toast", text = "改名失败，可能重名或包含非法字符" });
+                    }
+
+                    break;
+                }
+
                 case "playPlaylist":
                     PlayPlaylist(GetString(root, "id"));
                     break;
@@ -811,6 +894,12 @@ internal sealed class WebLibraryForm : Form
     private static string ArtistOf(string path)
     {
         string folder = Path.GetFileName(Path.GetDirectoryName(path) ?? "").Trim();
+
+        // 这些是固定分类，不再从文件名里拆歌手。
+        if (folder is "其他" or "日语" or "狐妖" or "动漫")
+        {
+            return folder;
+        }
 
         if (!string.IsNullOrEmpty(folder) && !NonArtistFolders.Contains(folder))
         {
